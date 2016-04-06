@@ -1,14 +1,18 @@
 extern crate daggy;
 
 use std::rc::Rc;
+use std::slice;
 use std::cell::RefCell;
 use std::collections::HashSet;
 
 use daggy::NodeIndex;
+use daggy::petgraph::graph;
 
 use dag::PortNumbered;
 use process::Process;
-use shader::{Context, Shader};
+use shader::{Context, Shader, Source};
+
+pub use dag::{Port, port};
 
 pub mod process;
 mod dag;
@@ -23,7 +27,7 @@ pub enum EventType {
 
 pub struct TextureGenerator<'a, T: 'a> {
     dag: PortNumbered<Node<T>>,
-    listeners: Vec<Box<for <'b> Fn(&'b TextureGenerator<'a, T>, NodeIndex, &str, &str, EventType) + 'a>>,
+    listeners: Vec<Box<Fn(&TextureGenerator<'a, T>, NodeIndex, &Source, EventType) + 'a>>,
 }
 
 impl<'a, T> TextureGenerator<'a, T> {
@@ -64,7 +68,7 @@ impl<'a, T> TextureGenerator<'a, T> {
     }
 
     pub fn remove(&mut self, node: &NodeIndex) -> Option<Rc<RefCell<Process>>> {
-        let children = self.dag.children(*node).map(|n| n.1).collect::<Vec<_>>();
+        let children = self.dag.children(*node).map(|n| n.1.node).collect::<Vec<_>>();
         self.dag.remove_outgoing_edges(*node);
         for c in children {
             self.update_dag(c);
@@ -72,7 +76,7 @@ impl<'a, T> TextureGenerator<'a, T> {
         if let Some(n) = self.dag.remove_node(*node) {
             if let Some(program) = n.program.into_inner() {
                 for listener in &self.listeners {
-                    listener(self, *node, &program.0, &program.1, EventType::Removed);
+                    listener(self, *node, &program, EventType::Removed);
                 }
             }
             Some(n.process)
@@ -81,18 +85,18 @@ impl<'a, T> TextureGenerator<'a, T> {
         }
     }
 
-    pub fn connect(&mut self, from: (NodeIndex, u32), to: (NodeIndex, u32)) -> bool {
-        if let Ok(_) = self.dag.update_edge(from.0, from.1, to.0, to.1) {
-            self.update_dag(to.0);
+    pub fn connect(&mut self, from: Port<u32>, to: Port<u32>) -> bool {
+        if let Ok(_) = self.dag.update_edge(from, to) {
+            self.update_dag(to.node);
             true
         } else {
             false
         }
     }
 
-    pub fn disconnect(&mut self, to: (NodeIndex, u32)) -> Option<(NodeIndex, u32)> {
-        if let Some(from) = self.dag.remove_edge_to_port(to.0, to.1) {
-            self.update_dag(to.0);
+    pub fn disconnect(&mut self, to: Port<u32>) -> Option<Port<u32>> {
+        if let Some(from) = self.dag.remove_edge_to_port(to) {
+            self.update_dag(to.node);
             Some(from)
         } else {
             None
@@ -111,28 +115,31 @@ impl<'a, T> TextureGenerator<'a, T> {
         self.dag.edge_count()
     }
 
-    pub fn register_shader_listener<F: for <'b> Fn(&'b TextureGenerator<'a, T>, NodeIndex, &str, &str, EventType) + 'a>(&mut self, fun: F) {
+    pub fn register_shader_listener<F>(&mut self, fun: F)
+        where F: Fn(&TextureGenerator<'a, T>, NodeIndex, &Source, EventType) + 'a
+    {
         self.listeners.push(Box::new(fun));
     }
 
+    //TODO: Switch this to use topological order and cache more inteligently.
     fn update_dag(&self, node: NodeIndex) {
         let shader = self.build_shader(node);
         let mut program = self.dag.node_weight(node).unwrap().program.borrow_mut();
-        let event = if let None = *program {
-            EventType::Added
-        } else {
+        let event = if program.is_some() {
             EventType::Changed
+        } else {
+            EventType::Added
         };
         for listener in &self.listeners {
-            listener(self, node, &shader.0, &shader.1, event);
+            listener(self, node, &shader, event);
         }
         *program = Some(shader);
-        for (_, node, _) in self.dag.children(node) {
-            self.update_dag(node);
+        for child in self.dag.children(node).map(|n| n.1.node) {
+            self.update_dag(child);
         }
     }
 
-    fn build_shader(&self, node: NodeIndex) -> (String, String) {
+    fn build_shader(&self, node: NodeIndex) -> Source {
         let mut result = Shader::new();
         result.add_vertex("gl_Position = matrix * vec4(position, 0, 1);\n");
         result.add_fragment("vec4 one = vec4(1);\n");
@@ -151,10 +158,10 @@ impl<'a, T> TextureGenerator<'a, T> {
             shader.add_fragment(format!("vec4 in_{}_{} = vec4(0);\n", node.index(), s));
         }
         let mut inputs = HashSet::new();
-        for (parent, source, target) in self.dag.parents(node) {
+        for (parent, target) in self.dag.parents(node) {
             inputs.insert(target);
-            self.gather_shader(shader, parent, visited);
-            shader.add_fragment(format!("in_{}_{} = out_{}_{};\n", node.index(), target, parent.index(), source));
+            self.gather_shader(shader, parent.node, visited);
+            shader.add_fragment(format!("in_{}_{} = out_{}_{};\n", node.index(), target, parent.node.index(), parent.port));
         }
         let mut context = Context::new(node.index(), inputs, process.max_out());
         shader.add_fragment(process.shader(&mut context));
@@ -164,7 +171,7 @@ impl<'a, T> TextureGenerator<'a, T> {
 struct Node<T> {
     data: T,
     process: Rc<RefCell<Process>>,
-    program: RefCell<Option<(String, String)>>,
+    program: RefCell<Option<Source>>,
 }
 
 impl<T> Node<T> {
@@ -177,7 +184,7 @@ impl<T> Node<T> {
     }
 }
 
-pub struct Iter<'a, T: 'a>(std::slice::Iter<'a, ::daggy::petgraph::graph::Node<Node<T>>>);
+pub struct Iter<'a, T: 'a>(slice::Iter<'a, graph::Node<Node<T>>>);
 
 impl<'a, T> Iterator for Iter<'a, T> {
     type Item = (Rc<RefCell<Process>>, &'a T);

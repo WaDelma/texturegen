@@ -1,9 +1,20 @@
 use daggy::{Dag, Walker, NodeIndex, EdgeIndex, WouldCycle};
 use daggy::petgraph::graph::IndexType;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Edge {
     source: u32,
     target: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Port<Ix: IndexType> {
+    pub node: NodeIndex<Ix>,
+    pub port: u32,
+}
+
+pub fn port<Ix: IndexType>(node: NodeIndex<Ix>, port: u32) -> Port<Ix> {
+    Port{node: node, port: port}
 }
 
 pub struct PortNumbered<N, Ix: IndexType = u32> {
@@ -29,9 +40,9 @@ impl<N, Ix: IndexType> PortNumbered<N, Ix> {
         Children(&self.dag, self.dag.children(node))
     }
 
-    pub fn update_edge(&mut self, src: NodeIndex<Ix>, src_port: u32, trg: NodeIndex<Ix>, trg_port: u32) -> Result<EdgeIndex<Ix>, WouldBreak> {
-        let replaced = self.dag.parents(trg).find_edge(&self.dag, |dag, e, _| dag.edge_weight(e).unwrap().target == trg_port);
-        let result = self.dag.update_edge(src, trg, Edge{source: src_port, target: trg_port}).map_err(Into::into);
+    pub fn update_edge(&mut self, src: Port<Ix>, trg: Port<Ix>) -> Result<EdgeIndex<Ix>, WouldBreak> {
+        let replaced = self.dag.parents(trg.node).find_edge(&self.dag, |dag, e, _| dag.edge_weight(e).unwrap().target == trg.port);
+        let result = self.dag.update_edge(src.node, trg.node, Edge{source: src.port, target: trg.port}).map_err(Into::into);
         if let Ok(_) = result {
             if let Some(e) = replaced {
                 self.dag.remove_edge(e);
@@ -40,9 +51,9 @@ impl<N, Ix: IndexType> PortNumbered<N, Ix> {
         result
     }
 
-    pub fn remove_edge_to_port(&mut self, node: NodeIndex<Ix>, port: u32) -> Option<(NodeIndex<Ix>, u32)> {
-        if let Some(e) = self.dag.parents(node).find_edge(&self.dag, |dag, e, _| dag.edge_weight(e).unwrap().target == port) {
-            let result = (self.dag.edge_endpoints(e).unwrap().0, self.dag.edge_weight(e).unwrap().source);
+    pub fn remove_edge_to_port(&mut self, trg: Port<Ix>) -> Option<Port<Ix>> {
+        if let Some(e) = self.dag.parents(trg.node).find_edge(&self.dag, |dag, e, _| dag.edge_weight(e).unwrap().target == trg.port) {
+            let result = port(self.dag.edge_endpoints(e).unwrap().0, self.dag.edge_weight(e).unwrap().source);
             self.dag.remove_edge(e);
             Some(result)
         } else {
@@ -99,12 +110,12 @@ impl From<WouldCycle<Edge>> for WouldBreak {
 pub struct Edges<'a, Ix: IndexType>(::daggy::RawEdges<'a, Edge, Ix>, usize);
 
 impl<'a, Ix: IndexType> Iterator for Edges<'a, Ix> {
-    type Item = (NodeIndex<Ix>, u32, NodeIndex<Ix>, u32);
+    type Item = (Port<Ix>, Port<Ix>);
     fn next(&mut self) -> Option<Self::Item> {
         if self.1 < self.0.len() {
             let e = &self.0[self.1];
             self.1 += 1;
-            Some((e.source(), e.weight.source, e.target(), e.weight.target))
+            Some((port(e.source(), e.weight.source), port(e.target(), e.weight.target)))
         } else {
             None
         }
@@ -114,11 +125,11 @@ impl<'a, Ix: IndexType> Iterator for Edges<'a, Ix> {
 pub struct Parents<'a, N: 'a, Ix: IndexType>(&'a Dag<N, Edge, Ix>, ::daggy::Parents<N, Edge, Ix>);
 
 impl<'a, N: 'a, Ix: IndexType> Iterator for Parents<'a, N, Ix> {
-    type Item = (NodeIndex<Ix>, u32, u32);
+    type Item = (Port<Ix>, u32);
     fn next(&mut self) -> Option<Self::Item> {
         if let Some((edge, node)) = self.1.next(self.0) {
             let edge = self.0.edge_weight(edge).unwrap();
-            Some((node, edge.source, edge.target))
+            Some((port(node, edge.source), edge.target))
         } else {
             None
         }
@@ -128,11 +139,11 @@ impl<'a, N: 'a, Ix: IndexType> Iterator for Parents<'a, N, Ix> {
 pub struct Children<'a, N: 'a, Ix: IndexType>(&'a Dag<N, Edge, Ix>, ::daggy::Children<N, Edge, Ix>);
 
 impl<'a, N: 'a, Ix: IndexType> Iterator for Children<'a, N, Ix> {
-    type Item = (u32, NodeIndex<Ix>, u32);
+    type Item = (u32, Port<Ix>);
     fn next(&mut self) -> Option<Self::Item> {
         if let Some((edge, node)) = self.1.next(self.0) {
             let edge = self.0.edge_weight(edge).unwrap();
-            Some((edge.source, node, edge.target))
+            Some((edge.source, port(node, edge.target)))
         } else {
             None
         }

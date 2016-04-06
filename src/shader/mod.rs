@@ -1,6 +1,11 @@
 use std::fmt::{self, Formatter, Display};
 use std::collections::hash_map::{self, HashMap};
 
+pub struct Source {
+    pub vertex: String,
+    pub fragment: String,
+}
+
 pub struct Shader {
     vertex_snippets: Vec<String>,
     fragment_snippets: Vec<String>,
@@ -22,7 +27,7 @@ impl Shader {
         self.fragment_snippets.push(snippet.into());
     }
 
-    pub fn build(self) -> (String, String) {
+    pub fn build(self) -> Source {
         let mut vertex = String::new();
         vertex.push_str("#version 140\n");
         vertex.push_str("in vec2 position;\n");
@@ -41,7 +46,7 @@ impl Shader {
             fragment.push_str(&snippet);
         }
         fragment.push_str("}");
-        (vertex, fragment)
+        Source {vertex: vertex, fragment: fragment}
     }
 }
 
