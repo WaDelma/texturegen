@@ -36,7 +36,7 @@ impl Process for Constant {
     }
     fn setting(&self, key: usize) -> String {
         match key {
-            0 => format!("{}, {}, {}, {}", self.constant[0], self.constant[1], self.constant[2], self.constant[3]),
+            0 => format!("{},{},{},{}", self.constant[0], self.constant[1], self.constant[2], self.constant[3]),
             k => panic!("Unknown option: {}", k),
         }
     }
