@@ -5,14 +5,14 @@ use std::slice;
 use std::cell::RefCell;
 use std::collections::HashSet;
 
-use daggy::NodeIndex;
+use daggy::{PetGraph, NodeIndex};
 use daggy::petgraph::graph;
 
 use dag::PortNumbered;
 use process::Process;
 use shader::{Context, Shader, Source};
 
-pub use dag::{Port, port};
+pub use dag::{Edge, Port, port};
 
 pub mod process;
 mod dag;
@@ -104,6 +104,10 @@ impl<'a, T> TextureGenerator<'a, T> {
         }
     }
 
+    pub fn graph(&self) -> &PetGraph<Node<T>, ::dag::Edge, u32> {
+        self.dag.graph()
+    }
+
     pub fn iter(&self) -> Iter<T> {
         Iter(self.dag.raw_nodes().iter())
     }
@@ -169,7 +173,7 @@ impl<'a, T> TextureGenerator<'a, T> {
     }
 }
 
-struct Node<T> {
+pub struct Node<T> {
     data: T,
     process: Rc<RefCell<Process>>,
     program: RefCell<Option<Source>>,

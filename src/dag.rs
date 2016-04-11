@@ -1,10 +1,10 @@
-use daggy::{Dag, Walker, NodeIndex, EdgeIndex, WouldCycle};
+use daggy::{PetGraph, Dag, Walker, NodeIndex, EdgeIndex, WouldCycle};
 use daggy::petgraph::graph::IndexType;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Edge {
-    source: u32,
-    target: u32,
+pub struct Edge {
+    pub source: u32,
+    pub target: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -92,6 +92,10 @@ impl<N, Ix: IndexType> PortNumbered<N, Ix> {
 
     pub fn edge_count(&self) -> usize {
         self.dag.edge_count()
+    }
+
+    pub fn graph(&self) -> &PetGraph<N, Edge, Ix> {
+        self.dag.graph()
     }
 }
 
