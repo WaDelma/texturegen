@@ -31,8 +31,11 @@ impl Shader {
         let mut vertex = String::new();
         vertex.push_str("#version 140\n");
         vertex.push_str("in vec2 position;\n");
+        vertex.push_str("in vec2 tex_coords;\n");
         vertex.push_str("uniform mat4 matrix;\n");
+        vertex.push_str("out vec2 v_tex_coords;\n");
         vertex.push_str("void main() {\n");
+        vertex.push_str("v_tex_coords = tex_coords;\n");
         for snippet in self.vertex_snippets {
             vertex.push_str(&snippet);
         }
@@ -40,6 +43,7 @@ impl Shader {
 
         let mut fragment = String::new();
         fragment.push_str("#version 140\n");
+        fragment.push_str("in vec2 v_tex_coords;\n");
         fragment.push_str("out vec4 color;\n");
         fragment.push_str("void main() {\n");
         for snippet in self.fragment_snippets {

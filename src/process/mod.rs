@@ -5,7 +5,7 @@ use shader::Context;
 pub mod inputs;
 pub mod combiners;
 
-pub use self::inputs::Constant;
+pub use self::inputs::{Constant, Stripes};
 pub use self::combiners::{Blend, BlendType};
 
 pub enum ParseError {

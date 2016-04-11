@@ -17,6 +17,7 @@ pub use dag::{Port, port};
 pub mod process;
 mod dag;
 mod shader;
+mod utils;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EventType {
