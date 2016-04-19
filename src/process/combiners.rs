@@ -3,34 +3,21 @@ use std::cell::RefCell;
 use std::str::FromStr;
 
 use shader::Context;
-use process::{Process, ParseError};
+use process::{Process, ParseError, Setting};
 
-pub struct Blend(BlendType, BlendType);
+pub struct Blend(Type, Type);
 
 impl Blend {
-    pub fn new(color_blend: BlendType, alpha_blend: BlendType) -> Rc<RefCell<Process>> {
+    pub fn new(color_blend: Type, alpha_blend: Type) -> Rc<RefCell<Process>> {
         Rc::new(RefCell::new(Blend(color_blend, alpha_blend)))
     }
 }
 
 impl Process for Blend {
-    fn modify(&mut self, key: usize, value: String) -> Result<(), ParseError> {
-        match key {
-            0 => self.0 = try!(value.parse()),
-            1 => self.1 = try!(value.parse()),
-            k => panic!("Unknown option: {}", k),
-        }
-        Ok(())
-    }
-    fn setting(&self, key: usize) -> String {
-        match key {
-            0 => format!("{:?}", self.0),
-            1 => format!("{:?}", self.1),
-            k => panic!("Unknown option: {}", k),
-        }
-    }
-    fn settings(&self) -> Vec<String> {
-        vec!["blend".into(), "alpha".into()]
+    fn settings(&mut self) -> Vec<(String, Setting)> {
+        vec![
+        ("blend".into(), Setting::Blend(&mut self.0)),
+        ("alpha".into(), Setting::Blend(&mut self.1))]
     }
     fn max_in(&self) -> u32 {2}
     fn max_out(&self) -> u32 {1}
@@ -50,28 +37,31 @@ impl Process for Blend {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BlendType {
-    Normal,
-    Multiply,
-    Divide,
-    Add,
-    Substract,
-    Difference,
-    Darken,
-    Lighten,
-    Screen,
-    Overlay,
-    Hard,
-    Soft,
-    // Dodge,
-    // Burn,
+custom_derive! {
+    #[derive(Debug, Clone, Copy, PartialEq, Eq,
+        IterVariants(Types), IterVariantNames(TypeNames))]
+    pub enum Type {
+        Normal,
+        Multiply,
+        Divide,
+        Add,
+        Substract,
+        Difference,
+        Darken,
+        Lighten,
+        Screen,
+        Overlay,
+        Hard,
+        Soft,
+        // Dodge,
+        // Burn,
+    }
 }
 
-impl FromStr for BlendType {
+impl FromStr for Type {
     type Err = ParseError;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
-        use self::BlendType::*;
+        use self::Type::*;
         Ok(match input {
             "normal" => Normal,
             "multiply" => Multiply,
@@ -90,9 +80,9 @@ impl FromStr for BlendType {
     }
 }
 
-impl BlendType {
+impl Type {
     fn blend(&self, ctx: &mut Context, channels: &str) -> String {
-        use self::BlendType::*;
+        use self::Type::*;
         let a = format!("{}.{}", ctx.input(0).unwrap(), channels);
         let b = format!("{}.{}", ctx.input(1).unwrap(), channels);
         let one = format!("one.{}", channels);

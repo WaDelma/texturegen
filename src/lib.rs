@@ -1,4 +1,8 @@
 extern crate daggy;
+#[macro_use]
+extern crate custom_derive;
+#[macro_use]
+extern crate enum_derive;
 
 use std::rc::Rc;
 use std::slice;
@@ -51,21 +55,6 @@ impl<'a, T> TextureGenerator<'a, T> {
         let n = self.dag.add_node(Node::new(node, data));
         self.update_dag(n);
         n
-    }
-
-    pub fn modify(&self, node: NodeIndex, key: usize, value: String) -> bool {
-        if let Some(weight) = self.dag.node_weight(node) {
-            let mut process = weight.process.borrow_mut();
-            if let Ok(_) = process.modify(key, value) {
-                drop(process);
-                self.update_dag(node);
-                true
-            } else {
-                false
-            }
-        } else {
-            false
-        }
     }
 
     pub fn remove(&mut self, node: &NodeIndex) -> Option<Rc<RefCell<Process>>> {

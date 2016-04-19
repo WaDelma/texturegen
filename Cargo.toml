@@ -4,4 +4,6 @@ version = "0.1.0"
 authors = ["WaDelma <delma@del.ma>"]
 
 [dependencies]
-daggy = "=0.4.0"
+daggy = "=0.4.*"
+enum_derive = "=0.1.*"
+custom_derive = "=0.1.*"
