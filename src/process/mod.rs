@@ -1,5 +1,3 @@
-use std::num::{ParseFloatError, ParseIntError};
-
 use shader::Context;
 
 pub mod inputs;
@@ -12,26 +10,15 @@ pub use self::combiners::Type as BlendType;
 pub use self::modifiers::EdgeDetect;
 pub use self::modifiers::Type as EdgeDetectType;
 
-pub enum ParseError {
-    Internal,
-    Unknown(String),
-    ParseFloatError(ParseFloatError),
-    ParseIntError(ParseIntError),
-}
-
-impl From<ParseFloatError> for ParseError {
-    fn from(error: ParseFloatError) -> ParseError {
-        ParseError::ParseFloatError(error)
-    }
-}
-
-impl From<ParseIntError> for ParseError {
-    fn from(error: ParseIntError) -> ParseError {
-        ParseError::ParseIntError(error)
-    }
-}
-
 pub enum Setting<'a> {
+    Text(&'a String),
+    Integer(&'a u32),
+    Float(&'a f32),
+    Color(&'a [f32; 4]),
+    Blend(&'a BlendType),
+}
+
+pub enum SettingMut<'a> {
     Text(&'a mut String),
     Integer(&'a mut u32),
     Float(&'a mut f32),
@@ -53,7 +40,9 @@ impl<'a> ToString for Setting<'a> {
 }
 
 pub trait Process {
-    fn settings(&mut self) -> Vec<(String, Setting)>;
+    fn setting(&self, &str) -> Setting;
+    fn setting_mut(&mut self, &str) -> SettingMut;
+    fn settings(&self) -> Vec<&'static str>;
     fn max_in(&self) -> u32;
     fn max_out(&self) -> u32;
     fn shader(&self, context: &mut Context) -> String;

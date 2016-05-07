@@ -1,9 +1,5 @@
-use std::rc::Rc;
-use std::cell::RefCell;
-
 use shader::Context;
-use process::{Process, ParseError, Setting};
-use utils::*;
+use process::{Process, Setting, SettingMut};
 
 pub enum Type {
     Sobel,
@@ -16,18 +12,31 @@ pub struct EdgeDetect {
 }
 
 impl EdgeDetect {
-    pub fn new(threshold: f32, edtype: Type) -> Rc<RefCell<Process>> {
-        Rc::new(RefCell::new(EdgeDetect {
+    pub fn new(threshold: f32, edtype: Type) -> Box<Process + Sized> {
+        Box::new(EdgeDetect {
             threshold: threshold,
             edtype: edtype,
-        }))
+        })
     }
 }
 
 impl Process for EdgeDetect {
-    fn settings(&mut self) -> Vec<(String, Setting)> {
-        vec![
-        ("threshold".into(), Setting::Float(&mut self.threshold)),
+    fn setting(&self, key: &str) -> Setting {
+        use process::Setting::*;
+        match key {
+            "threshold" => Float(&self.threshold),
+            _ => panic!(),
+        }
+    }
+    fn setting_mut(&mut self, key: &str) -> SettingMut {
+        use process::SettingMut::*;
+        match key {
+            "threshold" => Float(&mut self.threshold),
+            _ => panic!(),
+        }
+    }
+    fn settings(&self) -> Vec<&'static str> {
+        vec!["threshold",
         // ("type".into(), Setting::EdgeDetectType(&mut self.edtype))
         ]
     }

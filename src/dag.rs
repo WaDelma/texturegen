@@ -94,6 +94,10 @@ impl<N, Ix: IndexType> PortNumbered<N, Ix> {
         self.dag.edge_count()
     }
 
+    pub fn node_count(&self) -> usize {
+        self.dag.node_count()
+    }
+
     pub fn graph(&self) -> &PetGraph<N, Edge, Ix> {
         self.dag.graph()
     }

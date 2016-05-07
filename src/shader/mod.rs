@@ -1,6 +1,7 @@
 use std::fmt::{self, Formatter, Display};
 use std::collections::hash_map::{self, HashMap};
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Source {
     pub vertex: String,
     pub fragment: String,

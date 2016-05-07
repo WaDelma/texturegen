@@ -1,25 +1,35 @@
-use std::rc::Rc;
-use std::cell::RefCell;
-
 use shader::Context;
-use process::{Process, ParseError, Setting};
-use utils::*;
+use process::{Process, Setting, SettingMut};
 
 pub struct Constant {
     color: [f32; 4],
 }
 
 impl Constant {
-    pub fn new(color: [f32; 4]) -> Rc<RefCell<Process>> {
-        Rc::new(RefCell::new(Constant {
+    pub fn new(color: [f32; 4]) -> Box<Process + Sized> {
+        Box::new(Constant {
             color: color,
-        }))
+        })
     }
 }
 
 impl Process for Constant {
-    fn settings(&mut self) -> Vec<(String, Setting)> {
-        vec![("color".into(), Setting::Color(&mut self.color))]
+    fn setting(&self, key: &str) -> Setting {
+        use process::Setting::*;
+        match key {
+            "color" => Color(&self.color),
+            _ => panic!(),
+        }
+    }
+    fn setting_mut(&mut self, key: &str) -> SettingMut {
+        use process::SettingMut::*;
+        match key {
+            "color" => Color(&mut self.color),
+            _ => panic!(),
+        }
+    }
+    fn settings(&self) -> Vec<&'static str> {
+        vec!["color"]
     }
     fn max_in(&self) -> u32 {0}
     fn max_out(&self) -> u32 {1}
@@ -37,23 +47,39 @@ pub struct Stripes {
 }
 
 impl Stripes {
-    pub fn new(ver: u32, hor: u32, even_col: [f32; 4], odd_col: [f32; 4]) -> Rc<RefCell<Process>> {
-        Rc::new(RefCell::new(Stripes {
+    pub fn new(ver: u32, hor: u32, even_col: [f32; 4], odd_col: [f32; 4]) -> Box<Process + Sized> {
+        Box::new(Stripes {
             ver: ver,
             hor: hor,
             even_col: even_col,
             odd_col: odd_col,
-        }))
+        })
     }
 }
 
 impl Process for Stripes {
-    fn settings(&mut self) -> Vec<(String, Setting)> {
-        vec![
-        ("horizontal".into(), Setting::Integer(&mut self.hor)),
-        ("vertical".into(), Setting::Integer(&mut self.ver)),
-        ("even color".into(), Setting::Color(&mut self.even_col)),
-        ("odd color".into(), Setting::Color(&mut self.odd_col))]
+    fn setting(&self, key: &str) -> Setting {
+        use process::Setting::*;
+        match key {
+            "horizontal" => Integer(&self.hor),
+            "vertical" => Integer(&self.ver),
+            "even color" => Color(&self.even_col),
+            "odd color" => Color(&self.odd_col),
+            _ => panic!(),
+        }
+    }
+    fn setting_mut(&mut self, key: &str) -> SettingMut {
+        use process::SettingMut::*;
+        match key {
+            "horizontal" => Integer(&mut self.hor),
+            "vertical" => Integer(&mut self.ver),
+            "even color" => Color(&mut self.even_col),
+            "odd color" => Color(&mut self.odd_col),
+            _ => panic!(),
+        }
+    }
+    fn settings(&self) -> Vec<&'static str> {
+        vec!["horizontal", "vertical", "even color", "odd color"]
     }
     fn max_in(&self) -> u32 {0}
     fn max_out(&self) -> u32 {1}

@@ -1,23 +1,33 @@
-use std::rc::Rc;
-use std::cell::RefCell;
-use std::str::FromStr;
-
 use shader::Context;
-use process::{Process, ParseError, Setting};
+use process::{Process, Setting, SettingMut};
 
 pub struct Blend(Type, Type);
 
 impl Blend {
-    pub fn new(color_blend: Type, alpha_blend: Type) -> Rc<RefCell<Process>> {
-        Rc::new(RefCell::new(Blend(color_blend, alpha_blend)))
+    pub fn new(color_blend: Type, alpha_blend: Type) -> Box<Process + Sized> {
+        Box::new(Blend(color_blend, alpha_blend))
     }
 }
 
 impl Process for Blend {
-    fn settings(&mut self) -> Vec<(String, Setting)> {
-        vec![
-        ("blend".into(), Setting::Blend(&mut self.0)),
-        ("alpha".into(), Setting::Blend(&mut self.1))]
+    fn setting(&self, key: &str) -> Setting {
+        use process::Setting::*;
+        match key {
+            "blend" => Blend(&self.0),
+            "alpha" => Blend(&self.1),
+            _ => panic!(),
+        }
+    }
+    fn setting_mut(&mut self, key: &str) -> SettingMut {
+        use process::SettingMut::*;
+        match key {
+            "blend" => Blend(&mut self.0),
+            "alpha" => Blend(&mut self.1),
+            _ => panic!(),
+        }
+    }
+    fn settings(&self) -> Vec<&'static str> {
+        vec!["blend", "alpha"]
     }
     fn max_in(&self) -> u32 {2}
     fn max_out(&self) -> u32 {1}
@@ -55,28 +65,6 @@ custom_derive! {
         Soft,
         // Dodge,
         // Burn,
-    }
-}
-
-impl FromStr for Type {
-    type Err = ParseError;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        use self::Type::*;
-        Ok(match input {
-            "normal" => Normal,
-            "multiply" => Multiply,
-            "divide" => Divide,
-            "add" => Add,
-            "substract" => Substract,
-            "difference" => Difference,
-            "darken" => Darken,
-            "lighten" => Lighten,
-            "screen" => Screen,
-            "overlay" => Overlay,
-            "hard" => Hard,
-            "soft" => Soft,
-            i => return Err(ParseError::Unknown(i.into())),
-        })
     }
 }
 
