@@ -4,6 +4,8 @@ extern crate custom_derive;
 #[macro_use]
 extern crate enum_derive;
 
+pub extern crate palette;
+
 use std::slice;
 use std::collections::HashSet;
 use std::ops::Deref;
@@ -18,6 +20,8 @@ use shader::{Context, Shader};
 
 pub use shader::Source;
 pub use dag::{Edge, Port, port};
+
+pub type Col = palette::pixel::Srgb;
 
 pub mod process;
 mod dag;
@@ -77,9 +81,13 @@ impl<T> Generator<T> {
         self.dag.node_weight(node).map(|n| (&n.process, &n.data))
     }
 
-    pub fn get_mut(&mut self, node: NodeIndex) -> Option<(&mut Box<Process + Sized>, &mut T)> {
-        self.dirtify(node); // TODO: This doesn't necessary mutate...
-        self.dag.node_weight_mut(node).map(|n| (&mut n.process, &mut n.data))
+    pub fn get_process_mut(&mut self, node: NodeIndex) -> Option<&mut Box<Process + Sized>> {
+        self.dirtify(node);
+        self.dag.node_weight_mut(node).map(|n| &mut n.process)
+    }
+
+    pub fn get_data_mut(&mut self, node: NodeIndex) -> Option<&mut T> {
+        self.dag.node_weight_mut(node).map(|n| &mut n.data)
     }
 
     pub fn add(&mut self, node: Box<Process + Sized>, data: T) -> NodeIndex {

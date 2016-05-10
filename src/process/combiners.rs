@@ -1,6 +1,7 @@
 use shader::Context;
 use process::{Process, Setting, SettingMut};
 
+#[derive(Clone, Debug)]
 pub struct Blend(Type, Type);
 
 impl Blend {

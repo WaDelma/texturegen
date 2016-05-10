@@ -1,12 +1,14 @@
-use shader::Context;
+use Col;
+use shader::{Context, col};
 use process::{Process, Setting, SettingMut};
 
+#[derive(Clone, Debug)]
 pub struct Constant {
-    color: [f32; 4],
+    color: Col,
 }
 
 impl Constant {
-    pub fn new(color: [f32; 4]) -> Box<Process + Sized> {
+    pub fn new(color: Col) -> Box<Process + Sized> {
         Box::new(Constant {
             color: color,
         })
@@ -34,20 +36,20 @@ impl Process for Constant {
     fn max_in(&self) -> u32 {0}
     fn max_out(&self) -> u32 {1}
     fn shader(&self, ctx: &mut Context) -> String {
-        let c = self.color;
-        format!("vec4 {} = vec4({}, {}, {}, {});\n", ctx.output(0), c[0], c[1], c[2], c[3])
+        format!("vec4 {} = {};\n", ctx.output(0), col(self.color))
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct Stripes {
     ver: u32,
     hor: u32,
-    even_col: [f32; 4],
-    odd_col: [f32; 4],
+    even_col: Col,
+    odd_col: Col,
 }
 
 impl Stripes {
-    pub fn new(ver: u32, hor: u32, even_col: [f32; 4], odd_col: [f32; 4]) -> Box<Process + Sized> {
+    pub fn new(ver: u32, hor: u32, even_col: Col, odd_col: Col) -> Box<Process + Sized> {
         Box::new(Stripes {
             ver: ver,
             hor: hor,
@@ -85,16 +87,126 @@ impl Process for Stripes {
     fn max_out(&self) -> u32 {1}
     fn shader(&self, ctx: &mut Context) -> String {
         let mut result = String::new();
-        let ec = self.even_col;
-        let oc = self.odd_col;
         let hor = 1. / self.hor as f64;
         let ver = 1. / self.ver as f64;
         result.push_str(&format!("vec4 {};\n", ctx.output(0)));
         result.push_str(&format!("if(mod(v_tex_coords.x, {}) < {} != mod(v_tex_coords.y, {}) < {}) {{\n", 2. * ver, ver, 2. * hor, hor));
-        result.push_str(&format!("{} = vec4({}, {}, {}, {});\n", ctx.output(0), oc[0], oc[1], oc[2], oc[3]));
+        result.push_str(&format!("{} = {};\n", ctx.output(0), col(self.odd_col)));
         result.push_str("} else {\n");
-        result.push_str(&format!("{} = vec4({}, {}, {}, {});\n", ctx.output(0), ec[0], ec[1], ec[2], ec[3]));
+        result.push_str(&format!("{} = {};\n", ctx.output(0), col(self.even_col)));
         result.push_str("}\n");
+        result
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct VoronoiNoise {
+    ver: u32,
+    hor: u32,
+    seed: u32,
+    grid: f32,
+    control: f32,
+}
+
+impl VoronoiNoise {
+    pub fn new(seed: u32, ver: u32, hor: u32, grid: f32, control: f32) -> Box<Process + Sized> {
+        Box::new(VoronoiNoise {
+            seed: seed,
+            ver: ver,
+            hor: hor,
+            grid: grid,
+            control: control,
+        })
+    }
+}
+
+impl Process for VoronoiNoise {
+    fn setting(&self, key: &str) -> Setting {
+        use process::Setting::*;
+        match key {
+            "horizontal" => Integer(&self.hor),
+            "vertical" => Integer(&self.ver),
+            "seed" => Integer(&self.seed),
+            "grid" => Float(&self.grid),
+            "control" => Float(&self.control),
+            _ => panic!(),
+        }
+    }
+    fn setting_mut(&mut self, key: &str) -> SettingMut {
+        use process::SettingMut::*;
+        match key {
+            "horizontal" => Integer(&mut self.hor),
+            "vertical" => Integer(&mut self.ver),
+            "seed" => Integer(&mut self.seed),
+            "grid" => Float(&mut self.grid),
+            "control" => Float(&mut self.control),
+            _ => panic!(),
+        }
+    }
+    fn settings(&self) -> Vec<&'static str> {
+        vec!["seed", "horizontal", "vertical", "grid", "control"]
+    }
+    fn max_in(&self) -> u32 {0}
+    fn max_out(&self) -> u32 {1}
+    fn shader(&self, ctx: &mut Context) -> String {
+        let mut result = String::new();
+        let temp = ctx.temporary();
+        let hor = 1. / self.hor as f32;
+        let ver = 1. / self.ver as f32;
+        result.push_str(&format!("float {} = iqnoise(v_tex_coords / vec2({}, {}), {}, {});\n", temp, hor, ver, self.grid, self.control));
+        result.push_str(&format!("vec4 {} = vec4({c}, {c}, {c}, 1.);\n", ctx.output(0), c = temp));
+        result
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Noise {
+    ver: u32,
+    hor: u32,
+    seed: u32,
+}
+
+impl Noise {
+    pub fn new(seed: u32, ver: u32, hor: u32) -> Box<Process + Sized> {
+        Box::new(Noise {
+            seed: seed,
+            ver: ver,
+            hor: hor,
+        })
+    }
+}
+
+impl Process for Noise {
+    fn setting(&self, key: &str) -> Setting {
+        use process::Setting::*;
+        match key {
+            "horizontal" => Integer(&self.hor),
+            "vertical" => Integer(&self.ver),
+            "seed" => Integer(&self.seed),
+            _ => panic!(),
+        }
+    }
+    fn setting_mut(&mut self, key: &str) -> SettingMut {
+        use process::SettingMut::*;
+        match key {
+            "horizontal" => Integer(&mut self.hor),
+            "vertical" => Integer(&mut self.ver),
+            "seed" => Integer(&mut self.seed),
+            _ => panic!(),
+        }
+    }
+    fn settings(&self) -> Vec<&'static str> {
+        vec!["seed", "horizontal", "vertical"]
+    }
+    fn max_in(&self) -> u32 {0}
+    fn max_out(&self) -> u32 {1}
+    fn shader(&self, ctx: &mut Context) -> String {
+        let mut result = String::new();
+        let temp = ctx.temporary();
+        let hor = 1. / self.hor as f32;
+        let ver = 1. / self.ver as f32;
+        result.push_str(&format!("float {} = snoise({}, v_tex_coords / vec2({}, {}));\n", temp, self.seed, hor, ver));
+        result.push_str(&format!("vec4 {} = vec4({c}, {c}, {c}, 1.);\n", ctx.output(0), c = temp));
         result
     }
 }
