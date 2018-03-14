@@ -53,17 +53,17 @@ pub trait Process: ProcessClone {
 }
 
 pub trait ProcessClone {
-    fn clone_box(&self) -> Box<Process + Sized + 'static>;
+    fn clone_box(&self) -> Box<Process + 'static>;
 }
 
 impl<T> ProcessClone for T where T: 'static + Process + Clone {
-    fn clone_box(&self) -> Box<Process + Sized + 'static> {
+    fn clone_box(&self) -> Box<Process + 'static> {
         Box::new(self.clone())
     }
 }
 
-impl Clone for Box<Process + Sized> {
-    fn clone(&self) -> Box<Process + Sized> {
+impl Clone for Box<Process> {
+    fn clone(&self) -> Box<Process> {
         self.clone_box()
     }
 }

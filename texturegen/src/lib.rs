@@ -12,7 +12,7 @@ use std::ops::Deref;
 
 use daggy::{PetGraph, NodeIndex};
 use daggy::petgraph::graph;
-use daggy::petgraph::Bfs;
+use daggy::petgraph::visit::Bfs;
 
 use dag::PortNumbered;
 use process::Process;
@@ -21,7 +21,7 @@ use shader::{Context, Shader};
 pub use shader::Source;
 pub use dag::{Edge, Port, port};
 
-pub type Col = palette::pixel::Srgb;
+pub type Col = palette::Srgba;
 
 pub mod process;
 mod dag;
@@ -41,7 +41,7 @@ pub struct Generator<T> {
 pub struct GeneratorView<'a, T: 'a> (&'a Generator<T>);
 
 impl<'a, T: 'a> GeneratorView<'a, T> {
-    pub fn get(&self, node: NodeIndex) -> Option<(&(Process + Sized), &T)> {
+    pub fn get(&self, node: NodeIndex) -> Option<(&(Process), &T)> {
         self.0.dag.node_weight(node).map(|n| (&*n.process, &n.data))
     }
 }
@@ -77,11 +77,11 @@ impl<T> Generator<T> {
         GeneratorView(&*self)
     }
 
-    pub fn get(&self, node: NodeIndex) -> Option<(&Box<Process + Sized>, &T)> {
+    pub fn get(&self, node: NodeIndex) -> Option<(&Box<Process>, &T)> {
         self.dag.node_weight(node).map(|n| (&n.process, &n.data))
     }
 
-    pub fn get_process_mut(&mut self, node: NodeIndex) -> Option<&mut Box<Process + Sized>> {
+    pub fn get_process_mut(&mut self, node: NodeIndex) -> Option<&mut Box<Process>> {
         self.dirtify(node);
         self.dag.node_weight_mut(node).map(|n| &mut n.process)
     }
@@ -90,13 +90,13 @@ impl<T> Generator<T> {
         self.dag.node_weight_mut(node).map(|n| &mut n.data)
     }
 
-    pub fn add(&mut self, node: Box<Process + Sized>, data: T) -> NodeIndex {
+    pub fn add(&mut self, node: Box<Process>, data: T) -> NodeIndex {
         let n = self.dag.add_node(Node::new(node, data));
         self.dirtify(n);
         n
     }
 
-    pub fn remove(&mut self, node: &NodeIndex) -> Option<(Box<Process + Sized>, T)> {
+    pub fn remove(&mut self, node: &NodeIndex) -> Option<(Box<Process>, T)> {
         let children = self.dag.children(*node).map(|n| n.1.node).collect::<Vec<_>>();
         self.dag.remove_outgoing_edges(*node);
         for c in children {
@@ -193,13 +193,13 @@ fn gather_shader<T>(dag: &PortNumbered<Node<T>>, shader: &mut Shader, node: Node
 
 pub struct Node<T> {
     data: T,
-    process: Box<Process + Sized>,
+    process: Box<Process>,
     program: Option<Source>,
     dirty: bool,
 }
 
 impl<T> Node<T> {
-    fn new(process: Box<Process + Sized>, data: T) -> Node<T> {
+    fn new(process: Box<Process>, data: T) -> Node<T> {
         Node {
             data: data,
             process: process,
@@ -212,7 +212,7 @@ impl<T> Node<T> {
 pub struct Iter<'a, T: 'a>(slice::Iter<'a, graph::Node<Node<T>>>);
 
 impl<'a, T> Iterator for Iter<'a, T> {
-    type Item = (&'a (Process + Sized), &'a T);
+    type Item = (&'a (Process), &'a T);
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next().map(|n| (&*n.weight.process, &n.weight.data))
     }

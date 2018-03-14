@@ -8,7 +8,7 @@ pub struct Constant {
 }
 
 impl Constant {
-    pub fn new(color: Col) -> Box<Process + Sized> {
+    pub fn new(color: Col) -> Box<Process> {
         Box::new(Constant {
             color: color,
         })
@@ -49,7 +49,7 @@ pub struct Stripes {
 }
 
 impl Stripes {
-    pub fn new(ver: u32, hor: u32, even_col: Col, odd_col: Col) -> Box<Process + Sized> {
+    pub fn new(ver: u32, hor: u32, even_col: Col, odd_col: Col) -> Box<Process> {
         Box::new(Stripes {
             ver: ver,
             hor: hor,
@@ -109,7 +109,7 @@ pub struct VoronoiNoise {
 }
 
 impl VoronoiNoise {
-    pub fn new(seed: u32, ver: u32, hor: u32, grid: f32, control: f32) -> Box<Process + Sized> {
+    pub fn new(seed: u32, ver: u32, hor: u32, grid: f32, control: f32) -> Box<Process> {
         Box::new(VoronoiNoise {
             seed: seed,
             ver: ver,
@@ -167,7 +167,7 @@ pub struct Noise {
 }
 
 impl Noise {
-    pub fn new(seed: u32, ver: u32, hor: u32) -> Box<Process + Sized> {
+    pub fn new(seed: u32, ver: u32, hor: u32) -> Box<Process> {
         Box::new(Noise {
             seed: seed,
             ver: ver,

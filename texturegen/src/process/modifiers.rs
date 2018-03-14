@@ -14,7 +14,7 @@ pub struct EdgeDetect {
 }
 
 impl EdgeDetect {
-    pub fn new(threshold: f32, edtype: Type) -> Box<Process + Sized> {
+    pub fn new(threshold: f32, edtype: Type) -> Box<Process> {
         Box::new(EdgeDetect {
             threshold: threshold,
             edtype: edtype,
@@ -57,7 +57,7 @@ pub struct Select {
 }
 
 impl Select {
-    pub fn new(threshold: f32) -> Box<Process + Sized> {
+    pub fn new(threshold: f32) -> Box<Process> {
         Box::new(Select {
             threshold: threshold,
         })
@@ -104,7 +104,7 @@ pub struct Invert {
 }
 
 impl Invert {
-    pub fn new() -> Box<Process + Sized> {
+    pub fn new() -> Box<Process> {
         Box::new(Invert {
             alpha: false,
         })

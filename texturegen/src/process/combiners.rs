@@ -5,7 +5,7 @@ use process::{Process, Setting, SettingMut};
 pub struct Blend(Type, Type);
 
 impl Blend {
-    pub fn new(color_blend: Type, alpha_blend: Type) -> Box<Process + Sized> {
+    pub fn new(color_blend: Type, alpha_blend: Type) -> Box<Process> {
         Box::new(Blend(color_blend, alpha_blend))
     }
 }

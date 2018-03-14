@@ -1,0 +1,10 @@
+[package]
+name = "texturegen"
+version = "0.1.0"
+authors = ["WaDelma <delma@del.ma>"]
+
+[dependencies]
+daggy = "0.5.0"
+palette = "0.3.0"
+enum_derive = "0.1.7"
+custom_derive = "0.1.7"

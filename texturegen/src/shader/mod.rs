@@ -1,7 +1,7 @@
 use std::fmt::{self, Formatter, Display};
 use std::collections::hash_map::{self, HashMap};
 
-use palette::Rgba;
+use palette::rgb::Rgba;
 
 use Col;
 
