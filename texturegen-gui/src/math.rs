@@ -1,4 +1,4 @@
-use {Vect, Mat};
+use {Mat, Vect};
 
 type Vec4<T> = ::nalgebra::Vector4<T>;
 
@@ -35,21 +35,21 @@ pub fn inverse_transform(matrix: Mat, vector: Vect) -> Vect {
 }
 
 pub fn scale(x: f32, y: f32) -> Mat {
-    matrix(
-        [[x , 0., 0., 0.],
-         [0., y , 0., 0.],
-         [0., 0., 1., 0.],
-         [0., 0., 0., 1.]]
-    )
+    matrix([
+        [x, 0., 0., 0.],
+        [0., y, 0., 0.],
+        [0., 0., 1., 0.],
+        [0., 0., 0., 1.],
+    ])
 }
 
 pub fn translation(x: f32, y: f32) -> Mat {
-    matrix(
-        [[1., 0., 0., 0.],
-         [0., 1., 0., 0.],
-         [0., 0., 1., 0.],
-         [x , y , 0., 1.]]
-    )
+    matrix([
+        [1., 0., 0., 0.],
+        [0., 1., 0., 0.],
+        [0., 0., 1., 0.],
+        [x, y, 0., 1.],
+    ])
 }
 
 pub fn matrix(matrix: [[f32; 4]; 4]) -> Mat {

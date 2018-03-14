@@ -5,10 +5,10 @@ pub mod inputs;
 pub mod combiners;
 pub mod modifiers;
 
-pub use self::inputs::{Constant, Stripes, VoronoiNoise, Noise};
+pub use self::inputs::{Constant, Noise, Stripes, VoronoiNoise};
 pub use self::combiners::Blend;
 pub use self::combiners::Type as BlendType;
-pub use self::modifiers::{EdgeDetect, Select, Invert};
+pub use self::modifiers::{EdgeDetect, Invert, Select};
 pub use self::modifiers::Type as EdgeDetectType;
 
 pub enum Setting<'a> {
@@ -35,7 +35,7 @@ impl<'a> ToString for Setting<'a> {
         match *self {
             Text(ref t) => (*t).clone(),
             Integer(ref i) => format!("{}", i),
-            Boolean(ref b) => format!("{}", if **b {1} else {0}),
+            Boolean(ref b) => format!("{}", if **b { 1 } else { 0 }),
             Float(ref f) => format!("{}", f),
             Color(ref c) => format!("{},{},{},{}", c.red, c.green, c.blue, c.alpha),
             Blend(ref b) => format!("{:?}", b),
@@ -56,7 +56,10 @@ pub trait ProcessClone {
     fn clone_box(&self) -> Box<Process + 'static>;
 }
 
-impl<T> ProcessClone for T where T: 'static + Process + Clone {
+impl<T> ProcessClone for T
+where
+    T: 'static + Process + Clone,
+{
     fn clone_box(&self) -> Box<Process + 'static> {
         Box::new(self.clone())
     }

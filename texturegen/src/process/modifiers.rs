@@ -38,16 +38,28 @@ impl Process for EdgeDetect {
         }
     }
     fn settings(&self) -> Vec<&'static str> {
-        vec!["threshold",
-        // ("type".into(), Setting::EdgeDetectType(&mut self.edtype))
+        vec![
+            "threshold",
+            // ("type".into(), Setting::EdgeDetectType(&mut self.edtype))
         ]
     }
-    fn max_in(&self) -> u32 {1}
-    fn max_out(&self) -> u32 {1}
+    fn max_in(&self) -> u32 {
+        1
+    }
+    fn max_out(&self) -> u32 {
+        1
+    }
     fn shader(&self, ctx: &mut Context) -> String {
         let threshold = self.threshold;
         // TODO: Edge detection using first order methods requires evaluation of parents in 9 different places.
-        format!("vec4 {} = vec4({}, {}, {}, {});\n", ctx.output(0), threshold, threshold, threshold, threshold,)
+        format!(
+            "vec4 {} = vec4({}, {}, {}, {});\n",
+            ctx.output(0),
+            threshold,
+            threshold,
+            threshold,
+            threshold,
+        )
     }
 }
 
@@ -82,12 +94,20 @@ impl Process for Select {
     fn settings(&self) -> Vec<&'static str> {
         vec!["threshold"]
     }
-    fn max_in(&self) -> u32 {3}
-    fn max_out(&self) -> u32 {1}
+    fn max_in(&self) -> u32 {
+        3
+    }
+    fn max_out(&self) -> u32 {
+        1
+    }
     fn shader(&self, ctx: &mut Context) -> String {
         if let (Some(a), Some(t), Some(b)) = (ctx.input(0), ctx.input(1), ctx.input(2)) {
             let mut res = format!("vec4 {} = {};\n", ctx.output(0), a);
-            res.push_str(&format!("if(({t}.r * 0.33 + {t}.g * 0.33 + {t}.b * 0.33) > {}) {{\n", self.threshold, t = t));
+            res.push_str(&format!(
+                "if(({t}.r * 0.33 + {t}.g * 0.33 + {t}.b * 0.33) > {}) {{\n",
+                self.threshold,
+                t = t
+            ));
             res.push_str(&format!("  {} = {};\n", ctx.output(0), b));
             res.push_str(&format!("}}\n"));
             res
@@ -97,17 +117,14 @@ impl Process for Select {
     }
 }
 
-
 #[derive(Clone, Debug)]
 pub struct Invert {
-    alpha: bool
+    alpha: bool,
 }
 
 impl Invert {
     pub fn new() -> Box<Process> {
-        Box::new(Invert {
-            alpha: false,
-        })
+        Box::new(Invert { alpha: false })
     }
 }
 
@@ -129,14 +146,26 @@ impl Process for Invert {
     fn settings(&self) -> Vec<&'static str> {
         vec!["alpha"]
     }
-    fn max_in(&self) -> u32 {1}
-    fn max_out(&self) -> u32 {1}
+    fn max_in(&self) -> u32 {
+        1
+    }
+    fn max_out(&self) -> u32 {
+        1
+    }
     fn shader(&self, ctx: &mut Context) -> String {
         if let Some(input) = ctx.input(0) {
             if self.alpha {
-                format!("vec4 {} = vec4({i}.rgb, 1 - {i}.a);\n", ctx.output(0), i = input)
+                format!(
+                    "vec4 {} = vec4({i}.rgb, 1 - {i}.a);\n",
+                    ctx.output(0),
+                    i = input
+                )
             } else {
-                format!("vec4 {} = vec4(1 - {i}.r, 1 - {i}.g, 1 - {i}.b, {i}.a);\n", ctx.output(0), i = input)
+                format!(
+                    "vec4 {} = vec4(1 - {i}.r, 1 - {i}.g, 1 - {i}.b, {i}.a);\n",
+                    ctx.output(0),
+                    i = input
+                )
             }
         } else {
             format!("vec4 {} = vec4(0);\n", ctx.output(0))

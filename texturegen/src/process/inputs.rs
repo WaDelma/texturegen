@@ -1,5 +1,5 @@
 use Col;
-use shader::{Context, col};
+use shader::{col, Context};
 use process::{Process, Setting, SettingMut};
 
 #[derive(Clone, Debug)]
@@ -9,9 +9,7 @@ pub struct Constant {
 
 impl Constant {
     pub fn new(color: Col) -> Box<Process> {
-        Box::new(Constant {
-            color: color,
-        })
+        Box::new(Constant { color: color })
     }
 }
 
@@ -33,8 +31,12 @@ impl Process for Constant {
     fn settings(&self) -> Vec<&'static str> {
         vec!["color"]
     }
-    fn max_in(&self) -> u32 {0}
-    fn max_out(&self) -> u32 {1}
+    fn max_in(&self) -> u32 {
+        0
+    }
+    fn max_out(&self) -> u32 {
+        1
+    }
     fn shader(&self, ctx: &mut Context) -> String {
         format!("vec4 {} = {};\n", ctx.output(0), col(self.color))
     }
@@ -83,14 +85,24 @@ impl Process for Stripes {
     fn settings(&self) -> Vec<&'static str> {
         vec!["horizontal", "vertical", "even color", "odd color"]
     }
-    fn max_in(&self) -> u32 {0}
-    fn max_out(&self) -> u32 {1}
+    fn max_in(&self) -> u32 {
+        0
+    }
+    fn max_out(&self) -> u32 {
+        1
+    }
     fn shader(&self, ctx: &mut Context) -> String {
         let mut result = String::new();
         let hor = 1. / self.hor as f64;
         let ver = 1. / self.ver as f64;
         result.push_str(&format!("vec4 {};\n", ctx.output(0)));
-        result.push_str(&format!("if(mod(v_tex_coords.x, {}) < {} != mod(v_tex_coords.y, {}) < {}) {{\n", 2. * ver, ver, 2. * hor, hor));
+        result.push_str(&format!(
+            "if(mod(v_tex_coords.x, {}) < {} != mod(v_tex_coords.y, {}) < {}) {{\n",
+            2. * ver,
+            ver,
+            2. * hor,
+            hor
+        ));
         result.push_str(&format!("{} = {};\n", ctx.output(0), col(self.odd_col)));
         result.push_str("} else {\n");
         result.push_str(&format!("{} = {};\n", ctx.output(0), col(self.even_col)));
@@ -146,15 +158,26 @@ impl Process for VoronoiNoise {
     fn settings(&self) -> Vec<&'static str> {
         vec!["seed", "horizontal", "vertical", "grid", "control"]
     }
-    fn max_in(&self) -> u32 {0}
-    fn max_out(&self) -> u32 {1}
+    fn max_in(&self) -> u32 {
+        0
+    }
+    fn max_out(&self) -> u32 {
+        1
+    }
     fn shader(&self, ctx: &mut Context) -> String {
         let mut result = String::new();
         let temp = ctx.temporary();
         let hor = 1. / self.hor as f32;
         let ver = 1. / self.ver as f32;
-        result.push_str(&format!("float {} = iqnoise(v_tex_coords / vec2({}, {}), {}, {});\n", temp, hor, ver, self.grid, self.control));
-        result.push_str(&format!("vec4 {} = vec4({c}, {c}, {c}, 1.);\n", ctx.output(0), c = temp));
+        result.push_str(&format!(
+            "float {} = iqnoise(v_tex_coords / vec2({}, {}), {}, {});\n",
+            temp, hor, ver, self.grid, self.control
+        ));
+        result.push_str(&format!(
+            "vec4 {} = vec4({c}, {c}, {c}, 1.);\n",
+            ctx.output(0),
+            c = temp
+        ));
         result
     }
 }
@@ -198,15 +221,26 @@ impl Process for Noise {
     fn settings(&self) -> Vec<&'static str> {
         vec!["seed", "horizontal", "vertical"]
     }
-    fn max_in(&self) -> u32 {0}
-    fn max_out(&self) -> u32 {1}
+    fn max_in(&self) -> u32 {
+        0
+    }
+    fn max_out(&self) -> u32 {
+        1
+    }
     fn shader(&self, ctx: &mut Context) -> String {
         let mut result = String::new();
         let temp = ctx.temporary();
         let hor = 1. / self.hor as f32;
         let ver = 1. / self.ver as f32;
-        result.push_str(&format!("float {} = snoise({}, v_tex_coords / vec2({}, {}));\n", temp, self.seed, hor, ver));
-        result.push_str(&format!("vec4 {} = vec4({c}, {c}, {c}, 1.);\n", ctx.output(0), c = temp));
+        result.push_str(&format!(
+            "float {} = snoise({}, v_tex_coords / vec2({}, {}));\n",
+            temp, self.seed, hor, ver
+        ));
+        result.push_str(&format!(
+            "vec4 {} = vec4({c}, {c}, {c}, 1.);\n",
+            ctx.output(0),
+            c = temp
+        ));
         result
     }
 }

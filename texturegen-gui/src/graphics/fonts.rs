@@ -6,12 +6,12 @@ use std::fs::File;
 use std::path::Path;
 use std::io::Read;
 
-use glium::{self, Frame, VertexBuffer, Blend, Program, Surface, Display};
-use glium::texture::{Texture2d, RawImage2d, MipmapsOption, UncompressedFloatFormat, ClientFormat};
+use glium::{self, Blend, Display, Frame, Program, Surface, VertexBuffer};
+use glium::texture::{ClientFormat, MipmapsOption, RawImage2d, Texture2d, UncompressedFloatFormat};
 use glium::index::{NoIndices, PrimitiveType};
 use glium::draw_parameters::DrawParameters;
-use glium::uniforms::{MinifySamplerFilter, MagnifySamplerFilter};
-use rusttype::{Font, FontCollection, Scale, Point, point, vector, PositionedGlyph};
+use glium::uniforms::{MagnifySamplerFilter, MinifySamplerFilter};
+use rusttype::{point, vector, Font, FontCollection, Point, PositionedGlyph, Scale};
 use rusttype::gpu_cache::Cache;
 use rusttype::Rect;
 
@@ -108,23 +108,39 @@ impl<'a> FontRenderer<'a> {
                     data: Cow::Owned(vec![128u8; cache_width as usize * cache_height as usize]),
                     width: cache_width,
                     height: cache_height,
-                    format: ClientFormat::U8
+                    format: ClientFormat::U8,
                 },
-            UncompressedFloatFormat::U8,
-            MipmapsOption::NoMipmap).unwrap(),
+                UncompressedFloatFormat::U8,
+                MipmapsOption::NoMipmap,
+            ).unwrap(),
         }
     }
-    pub fn bounding_box(&self, fonts: &Fonts, font: &str, size: f32, text: &str) -> Option<Rect<i32>> {
-        let font = fonts.0.get(font).expect(&format!("Font {} didn't exist.", font));
-        self.layout(&font.0, Scale::uniform(size * self.dpi_factor), text).1
+    pub fn bounding_box(
+        &self,
+        fonts: &Fonts,
+        font: &str,
+        size: f32,
+        text: &str,
+    ) -> Option<Rect<i32>> {
+        let font = fonts
+            .0
+            .get(font)
+            .expect(&format!("Font {} didn't exist.", font));
+        self.layout(&font.0, Scale::uniform(size * self.dpi_factor), text)
+            .1
     }
 
-    fn layout<'b>(&self, font: &'b Font<'b>, scale: Scale, text: &str) -> (Vec<PositionedGlyph<'b>>, Option<Rect<i32>>) {
+    fn layout<'b>(
+        &self,
+        font: &'b Font<'b>,
+        scale: Scale,
+        text: &str,
+    ) -> (Vec<PositionedGlyph<'b>>, Option<Rect<i32>>) {
         use unicode_normalization::UnicodeNormalization;
         let mut result = Vec::new();
         let metrics = font.v_metrics(scale);
         let advance_height = metrics.ascent - metrics.descent + metrics.line_gap;
-        let mut caret = point(0.0, metrics.ascent);// - advance_height / 2.);
+        let mut caret = point(0.0, metrics.ascent); // - advance_height / 2.);
         let mut last_glyph = None;
         for c in text.nfc() {
             if c.is_control() {
@@ -150,9 +166,12 @@ impl<'a> FontRenderer<'a> {
         if result.is_empty() {
             return (result, None);
         }
-        let mut bg = Rect {min: point(i32::MAX, i32::MAX), max: point(i32::MIN, i32::MIN)};
+        let mut bg = Rect {
+            min: point(i32::MAX, i32::MAX),
+            max: point(i32::MIN, i32::MIN),
+        };
         for glyph in &result {
-            if let Some(Rect{min, max}) = glyph.pixel_bounding_box() {
+            if let Some(Rect { min, max }) = glyph.pixel_bounding_box() {
                 bg.min.x = cmp::min(bg.min.x, min.x);
                 bg.min.y = cmp::min(bg.min.y, min.y);
                 bg.max.x = cmp::max(bg.max.x, max.x);
@@ -162,8 +181,18 @@ impl<'a> FontRenderer<'a> {
         (result, Some(bg))
     }
 
-    pub fn draw_text(&mut self, fonts: &Fonts, display: &Display, target: &mut Frame, font: &str, size: f32, color: [f32; 4], pos: Vect, text: &str) {
-        let fonts: &'static Fonts = unsafe {::std::mem::transmute(fonts)};
+    pub fn draw_text(
+        &mut self,
+        fonts: &Fonts,
+        display: &Display,
+        target: &mut Frame,
+        font: &str,
+        size: f32,
+        color: [f32; 4],
+        pos: Vect,
+        text: &str,
+    ) {
+        let fonts: &'static Fonts = unsafe { ::std::mem::transmute(fonts) };
         fn get_rect(min: Point<u32>, tex: &RawImage2d<u8>) -> glium::Rect {
             glium::Rect {
                 left: min.x,
@@ -175,7 +204,10 @@ impl<'a> FontRenderer<'a> {
         let (w, h) = display.get_framebuffer_dimensions();
         let (w, h) = (w as f32, h as f32);
         let origin = point(pos[0], pos[1]);
-        let font = fonts.0.get(font).expect(&format!("Font {} didn't exist.", font));
+        let font = fonts
+            .0
+            .get(font)
+            .expect(&format!("Font {} didn't exist.", font));
         let (glyphs, bg) = self.layout(&font.0, Scale::uniform(size * self.dpi_factor), text);
         if let Some(bg) = bg {
             let min = vector(bg.min.x as f32 / w, -bg.min.y as f32 / h) - vector(0.5, -0.5);
@@ -184,39 +216,49 @@ impl<'a> FontRenderer<'a> {
                 min: origin + min * 2.,
                 max: origin + max * 2.,
             };
-            let vertices = VertexBuffer::new(display, &[
-                vert(pos.min.x, pos.max.y),
-                vert(pos.min.x, pos.min.y),
-                vert(pos.max.x, pos.min.y),
-                vert(pos.max.x, pos.min.y),
-                vert(pos.max.x, pos.max.y),
-                vert(pos.min.x, pos.max.y),
-            ]).unwrap();
+            let vertices = VertexBuffer::new(
+                display,
+                &[
+                    vert(pos.min.x, pos.max.y),
+                    vert(pos.min.x, pos.min.y),
+                    vert(pos.max.x, pos.min.y),
+                    vert(pos.max.x, pos.min.y),
+                    vert(pos.max.x, pos.max.y),
+                    vert(pos.min.x, pos.max.y),
+                ],
+            ).unwrap();
             let uniforms = uniform! {
                 color: [1f32; 4],
             };
-            target.draw(&vertices,
-                        NoIndices(PrimitiveType::TrianglesList),
-                        &self.program_bg, &uniforms,
-                        &DrawParameters {
-                            blend: Blend::alpha_blending(),
-                            ..Default::default()
-                        }).unwrap();
+            target
+                .draw(
+                    &vertices,
+                    NoIndices(PrimitiveType::TrianglesList),
+                    &self.program_bg,
+                    &uniforms,
+                    &DrawParameters {
+                        blend: Blend::alpha_blending(),
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
         }
 
         for glyph in &glyphs {
             self.cache.queue_glyph(font.1, glyph.clone());
         }
         let cache_tex = &self.cache_tex;
-        self.cache.cache_queued(|rect, data| {
-            let tex = RawImage2d {
-                data: Cow::Borrowed(data),
-                width: rect.width(),
-                height: rect.height(),
-                format: ClientFormat::U8,
-            };
-            cache_tex.main_level().write(get_rect(rect.min, &tex), tex);
-        }).unwrap();
+        self.cache
+            .cache_queued(|rect, data| {
+                let tex = RawImage2d {
+                    data: Cow::Borrowed(data),
+                    width: rect.width(),
+                    height: rect.height(),
+                    format: ClientFormat::U8,
+                };
+                cache_tex.main_level().write(get_rect(rect.min, &tex), tex);
+            })
+            .unwrap();
         let uniforms = uniform! {
             tex: self.cache_tex.sampled()
                 .magnify_filter(MagnifySamplerFilter::Nearest)
@@ -227,7 +269,7 @@ impl<'a> FontRenderer<'a> {
             #[derive(Copy, Clone)]
             struct Vertex {
                 position: [f32; 2],
-                tex_coords: [f32; 2]
+                tex_coords: [f32; 2],
             }
             fn vertex(position: [f32; 2], tex_coords: [f32; 2]) -> Vertex {
                 Vertex {
@@ -236,34 +278,44 @@ impl<'a> FontRenderer<'a> {
                 }
             }
             implement_vertex!(Vertex, position, tex_coords);
-            let vertices = glyphs.iter().flat_map(|g| {
-                if let Ok(Some((uv, screen))) = self.cache.rect_for(font.1, g) {
-                    let min = vector(screen.min.x as f32 / w, -screen.min.y as f32 / h) - vector(0.5, -0.5);
-                    let max = vector(screen.max.x as f32 / w, -screen.max.y as f32 / h) - vector(0.5, -0.5);
-                    let pos = Rect {
-                        min: origin + min * 2.,
-                        max: origin + max * 2.,
-                    };
-                    ArrayVec::from([
-                        vertex([pos.min.x, pos.max.y], [uv.min.x, uv.max.y]),
-                        vertex([pos.min.x, pos.min.y], [uv.min.x, uv.min.y]),
-                        vertex([pos.max.x, pos.min.y], [uv.max.x, uv.min.y]),
-                        vertex([pos.max.x, pos.min.y], [uv.max.x, uv.min.y]),
-                        vertex([pos.max.x, pos.max.y], [uv.max.x, uv.max.y]),
-                        vertex([pos.min.x, pos.max.y], [uv.min.x, uv.max.y]),
-                    ])
-                } else {
-                    ArrayVec::new()
-                }
-            }).collect::<Vec<_>>();
+            let vertices = glyphs
+                .iter()
+                .flat_map(|g| {
+                    if let Ok(Some((uv, screen))) = self.cache.rect_for(font.1, g) {
+                        let min = vector(screen.min.x as f32 / w, -screen.min.y as f32 / h)
+                            - vector(0.5, -0.5);
+                        let max = vector(screen.max.x as f32 / w, -screen.max.y as f32 / h)
+                            - vector(0.5, -0.5);
+                        let pos = Rect {
+                            min: origin + min * 2.,
+                            max: origin + max * 2.,
+                        };
+                        ArrayVec::from([
+                            vertex([pos.min.x, pos.max.y], [uv.min.x, uv.max.y]),
+                            vertex([pos.min.x, pos.min.y], [uv.min.x, uv.min.y]),
+                            vertex([pos.max.x, pos.min.y], [uv.max.x, uv.min.y]),
+                            vertex([pos.max.x, pos.min.y], [uv.max.x, uv.min.y]),
+                            vertex([pos.max.x, pos.max.y], [uv.max.x, uv.max.y]),
+                            vertex([pos.min.x, pos.max.y], [uv.min.x, uv.max.y]),
+                        ])
+                    } else {
+                        ArrayVec::new()
+                    }
+                })
+                .collect::<Vec<_>>();
             VertexBuffer::new(display, &vertices).unwrap()
         };
-        target.draw(&vertex_buffer,
-                    NoIndices(PrimitiveType::TrianglesList),
-                    &self.program, &uniforms,
-                    &DrawParameters {
-                        blend: Blend::alpha_blending(),
-                        ..Default::default()
-                    }).unwrap();
+        target
+            .draw(
+                &vertex_buffer,
+                NoIndices(PrimitiveType::TrianglesList),
+                &self.program,
+                &uniforms,
+                &DrawParameters {
+                    blend: Blend::alpha_blending(),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
     }
 }

@@ -30,8 +30,12 @@ impl Process for Blend {
     fn settings(&self) -> Vec<&'static str> {
         vec!["blend", "alpha"]
     }
-    fn max_in(&self) -> u32 {2}
-    fn max_out(&self) -> u32 {1}
+    fn max_in(&self) -> u32 {
+        2
+    }
+    fn max_out(&self) -> u32 {
+        1
+    }
     fn shader(&self, ctx: &mut Context) -> String {
         if ctx.input_len() == 0 {
             return format!("vec4 {} = vec4(0);\n", ctx.output(0));
@@ -76,38 +80,52 @@ impl Type {
         let b = format!("{}.{}", ctx.input(1).unwrap(), channels);
         let one = format!("one.{}", channels);
         match *self {
-            Normal =>     format!("{}", b),
-            Multiply =>   format!("{} * {}", a, b),
-            Divide =>     format!("{} / {}", a, b),
-            Add =>        format!("{} + {}", a, b),
-            Substract =>  format!("{} - {}", a, b),
+            Normal => format!("{}", b),
+            Multiply => format!("{} * {}", a, b),
+            Divide => format!("{} / {}", a, b),
+            Add => format!("{} + {}", a, b),
+            Substract => format!("{} - {}", a, b),
             Difference => format!("abs({} - {})", a, b),
-            Darken =>     format!("min({}, {})", a, b),
-            Lighten =>    format!("max({}, {})", a, b),
-            Screen =>     format!("{one} - ({one} - {}) * ({one} - {})", a, b, one = one),
-            Overlay =>    for_each_channel(channels, |c| {
-                              let a = format!("{}.{}", ctx.input(0).unwrap(), c);
-                              let b = format!("{}.{}", ctx.input(1).unwrap(), c);
-                              let one = format!("one.{}", c);
-                              format!("{a} < 0.5?\n\
-                                    (2 * {a} * {b}):\n\
-                                    ({one} - 2 * ({one} - {a}) * ({one} - {b}))", a = a, b = b, one = one)
-                          }),
-            Hard =>       for_each_channel(channels, |c| {
-                              let a = format!("{}.{}", ctx.input(0).unwrap(), c);
-                              let b = format!("{}.{}", ctx.input(1).unwrap(), c);
-                              let one = format!("one.{}", c);
-                              format!("{b} < 0.5?\n\
-                              (2 * {a} * {b}):\n\
-                              ({one} - 2 * ({one} - {a}) * ({one} - {b}))", a = a, b = b, one = one)
-                          }),
-            Soft =>       for_each_channel(channels, |c| {
-                              let a = format!("{}.{}", ctx.input(0).unwrap(), c);
-                              let b = format!("{}.{}", ctx.input(1).unwrap(), c);
-                              format!("{b} < 0.5?\n\
-                              (2 * {a} * {b} + {a} * {a} - 2 * {a} * {a} * {b}):\n\
-                              (2 * sqrt({a}) * {b} - sqrt({a}) + 2 * {a} - 2 * {a} * {b})", a = a, b = b)
-                          }),
+            Darken => format!("min({}, {})", a, b),
+            Lighten => format!("max({}, {})", a, b),
+            Screen => format!("{one} - ({one} - {}) * ({one} - {})", a, b, one = one),
+            Overlay => for_each_channel(channels, |c| {
+                let a = format!("{}.{}", ctx.input(0).unwrap(), c);
+                let b = format!("{}.{}", ctx.input(1).unwrap(), c);
+                let one = format!("one.{}", c);
+                format!(
+                    "{a} < 0.5?\n\
+                     (2 * {a} * {b}):\n\
+                     ({one} - 2 * ({one} - {a}) * ({one} - {b}))",
+                    a = a,
+                    b = b,
+                    one = one
+                )
+            }),
+            Hard => for_each_channel(channels, |c| {
+                let a = format!("{}.{}", ctx.input(0).unwrap(), c);
+                let b = format!("{}.{}", ctx.input(1).unwrap(), c);
+                let one = format!("one.{}", c);
+                format!(
+                    "{b} < 0.5?\n\
+                     (2 * {a} * {b}):\n\
+                     ({one} - 2 * ({one} - {a}) * ({one} - {b}))",
+                    a = a,
+                    b = b,
+                    one = one
+                )
+            }),
+            Soft => for_each_channel(channels, |c| {
+                let a = format!("{}.{}", ctx.input(0).unwrap(), c);
+                let b = format!("{}.{}", ctx.input(1).unwrap(), c);
+                format!(
+                    "{b} < 0.5?\n\
+                     (2 * {a} * {b} + {a} * {a} - 2 * {a} * {a} * {b}):\n\
+                     (2 * sqrt({a}) * {b} - sqrt({a}) + 2 * {a} - 2 * {a} * {b})",
+                    a = a,
+                    b = b
+                )
+            }),
             // b => panic!("Blending mode \"{:?}\" has not been implemented.", b),
         }
     }

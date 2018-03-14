@@ -1,21 +1,26 @@
-use glium::{Frame, VertexBuffer, Blend, Surface};
+use glium::{Blend, Frame, Surface, VertexBuffer};
 use glium::Display;
 use glium::index::{IndexBuffer, PrimitiveType};
 use glium::draw_parameters::DrawParameters;
 use glium::draw_parameters::LinearBlendingFactor::*;
 use glium::draw_parameters::BlendingFunction::*;
-use glium::uniforms::{Uniforms, UniformsStorage, AsUniformValue};
+use glium::uniforms::{AsUniformValue, Uniforms, UniformsStorage};
 
 use nalgebra::normalize;
 use texturegen::GeneratorView;
-use texturegen::process::{Process, Setting, BlendType};
+use texturegen::process::{BlendType, Process, Setting};
 
-use {SimContext, Selection, Node, Vect, input_pos, output_pos};
-use super::{RenderContext, Vertex, vert};
+use {input_pos, output_pos, Node, Selection, SimContext, Vect};
+use super::{vert, RenderContext, Vertex};
 use State::*;
 use math::*;
 
-pub fn render<'a>(display: &Display, rctx: &mut RenderContext<'a>, gen: GeneratorView<Node>, ctx: &SimContext) {
+pub fn render<'a>(
+    display: &Display,
+    rctx: &mut RenderContext<'a>,
+    gen: GeneratorView<Node>,
+    ctx: &SimContext,
+) {
     let mut target = display.draw();
     target.clear_color(0.0157, 0.0173, 0.0204, 1.);
     let draw_params = DrawParameters {
@@ -42,19 +47,29 @@ pub fn render<'a>(display: &Display, rctx: &mut RenderContext<'a>, gen: Generato
             matrix: *matrix.as_ref(),
         };
         draw(&mut target, &rctx, "back", "plain", &uniforms, &draw_params);
-        let matrix = rctx.cam * translation(corner_pos.x + 0.05, corner_pos.y + 0.05) * scale(0.9, 0.9);
+        let matrix =
+            rctx.cam * translation(corner_pos.x + 0.05, corner_pos.y + 0.05) * scale(0.9, 0.9);
         let program = data.shader.borrow();
         let program = program.as_ref().expect("Node didn't have shader.");
         let uniforms = uniform! {
             matrix: *matrix.as_ref(),
         };
         let model = rctx.models.get("node").unwrap();
-        target.draw(&model.vertices, &model.indices, &program, &uniforms, &draw_params).expect("Drawing node failed.");
+        target
+            .draw(
+                &model.vertices,
+                &model.indices,
+                &program,
+                &uniforms,
+                &draw_params,
+            )
+            .expect("Drawing node failed.");
 
         let mut draw = |things: &[_]| {
             for p in things {
                 let p = pos + flip_y(*p) - Vect::new(ctx.thingy_size, ctx.thingy_size) * 0.5;
-                let matrix = rctx.cam * translation(p.x, p.y) * scale(ctx.thingy_size, ctx.thingy_size);
+                let matrix =
+                    rctx.cam * translation(p.x, p.y) * scale(ctx.thingy_size, ctx.thingy_size);
                 let uniforms = uniform! {
                     matrix: *matrix.as_ref(),
                 };
@@ -86,7 +101,9 @@ pub fn render<'a>(display: &Display, rctx: &mut RenderContext<'a>, gen: Generato
         matrix: *matrix.as_ref(),
     };
     let program = rctx.programs.get("plain").unwrap();
-    target.draw(&vertices, &indices, program, &uniforms, &draw_params).unwrap();
+    target
+        .draw(&vertices, &indices, program, &uniforms, &draw_params)
+        .unwrap();
 
     if let Some(s) = ctx.selected {
         if let Some(node) = s.node() {
@@ -95,7 +112,9 @@ pub fn render<'a>(display: &Display, rctx: &mut RenderContext<'a>, gen: Generato
             } else {
                 None
             };
-            let node = gen.get(node).expect("Selection should always point to real node.").0;
+            let node = gen.get(node)
+                .expect("Selection should always point to real node.")
+                .0;
             let settings = node.settings();
             let size = 23.;
             for (i, setting) in settings.iter().enumerate() {
@@ -106,7 +125,16 @@ pub fn render<'a>(display: &Display, rctx: &mut RenderContext<'a>, gen: Generato
                 let mut string = setting.to_string();
                 string.push_str(": ");
                 string.push_str(&node.setting(setting).to_string());
-                rctx.font_renderer.draw_text(&rctx.fonts, &display, &mut target, "anka", size, [0., 0., 0., 1.], pos, &string);
+                rctx.font_renderer.draw_text(
+                    &rctx.fonts,
+                    &display,
+                    &mut target,
+                    "anka",
+                    size,
+                    [0., 0., 0., 1.],
+                    pos,
+                    &string,
+                );
             }
             if let Some(i) = set {
                 let pos = Vect::new(0., -(i as f32) / 20.);
@@ -114,19 +142,31 @@ pub fn render<'a>(display: &Display, rctx: &mut RenderContext<'a>, gen: Generato
                 string.push_str(": ");
                 match node.setting(settings[i]) {
                     Setting::Blend(ref b) => {
-                        let bb = rctx.font_renderer.bounding_box(&rctx.fonts, "anka", size, &string).unwrap();
+                        let bb = rctx.font_renderer
+                            .bounding_box(&rctx.fonts, "anka", size, &string)
+                            .unwrap();
                         string.push_str(&format!("{:?}", b));
                         let max = from_window_to_screen(dims, [bb.max.x, bb.max.y]);
                         let pos = pos + Vect::new(max.x * 1.5, -1. / 20.);
                         for (i, blend) in BlendType::iter_variants().enumerate() {
                             let blend = format!("{:?}", blend);
                             let pos = pos + Vect::new(0., -(i as f32 / 20.));
-                            rctx.font_renderer.draw_text(&rctx.fonts, &display, &mut target, "anka", size, [0., 0., 0., 1.], pos, &blend);
+                            rctx.font_renderer.draw_text(
+                                &rctx.fonts,
+                                &display,
+                                &mut target,
+                                "anka",
+                                size,
+                                [0., 0., 0., 1.],
+                                pos,
+                                &blend,
+                            );
                         }
-                    },
+                    }
                     _ => {
                         if let Some(Writing) = ctx.state {
-                            let ch = if 0 % 120 < 60 { //TODO: Fix Me
+                            let ch = if 0 % 120 < 60 {
+                                //TODO: Fix Me
                                 '|'
                             } else {
                                 ' '
@@ -140,20 +180,44 @@ pub fn render<'a>(display: &Display, rctx: &mut RenderContext<'a>, gen: Generato
                         }
                     }
                 }
-                rctx.font_renderer.draw_text(&rctx.fonts, &display, &mut target, "anka", size, [0., 0., 0., 1.], pos, &string);
+                rctx.font_renderer.draw_text(
+                    &rctx.fonts,
+                    &display,
+                    &mut target,
+                    "anka",
+                    size,
+                    [0., 0., 0., 1.],
+                    pos,
+                    &string,
+                );
             }
         }
     }
     target.finish().unwrap();
 }
 
-fn draw<A, B>(target: &mut Frame, rctx: &RenderContext, model: &str, program: &str, uniforms: &UniformsStorage<A, B>, draw_params: &DrawParameters)
-    where A: AsUniformValue,
-          B: Uniforms,
+fn draw<A, B>(
+    target: &mut Frame,
+    rctx: &RenderContext,
+    model: &str,
+    program: &str,
+    uniforms: &UniformsStorage<A, B>,
+    draw_params: &DrawParameters,
+) where
+    A: AsUniformValue,
+    B: Uniforms,
 {
     let model = rctx.models.get(model).unwrap();
     let program = rctx.programs.get(program).unwrap();
-    target.draw(&model.vertices, &model.indices, program, uniforms, draw_params).unwrap();
+    target
+        .draw(
+            &model.vertices,
+            &model.indices,
+            program,
+            uniforms,
+            draw_params,
+        )
+        .unwrap();
 }
 
 fn add_arrow(lines: &mut Vec<Vertex>, src: Vect, trg: Vect, len: f32, theta: f32) {
@@ -162,9 +226,7 @@ fn add_arrow(lines: &mut Vec<Vertex>, src: Vect, trg: Vect, len: f32, theta: f32
     let vec = normalize(&(src - trg));
     let mut add_part = |theta: f32| {
         let (sin, cos) = theta.sin_cos();
-        let arrow = Vect::new(
-            vec.x * cos - vec.y * sin,
-            vec.x * sin + vec.y * cos);
+        let arrow = Vect::new(vec.x * cos - vec.y * sin, vec.x * sin + vec.y * cos);
         lines.push(vert(trg.x, trg.y));
         let v = trg + (arrow * len);
         lines.push(vert(v.x, v.y));

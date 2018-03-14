@@ -1,4 +1,4 @@
-use daggy::{PetGraph, Dag, Walker, NodeIndex, EdgeIndex, WouldCycle};
+use daggy::{Dag, EdgeIndex, NodeIndex, PetGraph, Walker, WouldCycle};
 use daggy::petgraph::graph::IndexType;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -14,7 +14,10 @@ pub struct Port<Ix: IndexType> {
 }
 
 pub fn port<Ix: IndexType>(node: NodeIndex<Ix>, port: u32) -> Port<Ix> {
-    Port{node: node, port: port}
+    Port {
+        node: node,
+        port: port,
+    }
 }
 
 pub struct PortNumbered<N, Ix: IndexType = u32> {
@@ -23,9 +26,7 @@ pub struct PortNumbered<N, Ix: IndexType = u32> {
 
 impl<N, Ix: IndexType> PortNumbered<N, Ix> {
     pub fn new() -> PortNumbered<N, Ix> {
-        PortNumbered {
-            dag: Dag::new(),
-        }
+        PortNumbered { dag: Dag::new() }
     }
 
     pub fn edges<'a>(&'a self) -> Edges<'a, Ix> {
@@ -40,9 +41,26 @@ impl<N, Ix: IndexType> PortNumbered<N, Ix> {
         Children(&self.dag, self.dag.children(node))
     }
 
-    pub fn update_edge(&mut self, src: Port<Ix>, trg: Port<Ix>) -> Result<EdgeIndex<Ix>, WouldBreak> {
-        let replaced = self.dag.parents(trg.node).find_edge(&self.dag, |dag, e, _| dag.edge_weight(e).unwrap().target == trg.port);
-        let result = self.dag.update_edge(src.node, trg.node, Edge{source: src.port, target: trg.port}).map_err(Into::into);
+    pub fn update_edge(
+        &mut self,
+        src: Port<Ix>,
+        trg: Port<Ix>,
+    ) -> Result<EdgeIndex<Ix>, WouldBreak> {
+        let replaced = self.dag
+            .parents(trg.node)
+            .find_edge(&self.dag, |dag, e, _| {
+                dag.edge_weight(e).unwrap().target == trg.port
+            });
+        let result = self.dag
+            .update_edge(
+                src.node,
+                trg.node,
+                Edge {
+                    source: src.port,
+                    target: trg.port,
+                },
+            )
+            .map_err(Into::into);
         if let Ok(_) = result {
             if let Some(e) = replaced {
                 self.dag.remove_edge(e);
@@ -52,8 +70,15 @@ impl<N, Ix: IndexType> PortNumbered<N, Ix> {
     }
 
     pub fn remove_edge_to_port(&mut self, trg: Port<Ix>) -> Option<Port<Ix>> {
-        if let Some(e) = self.dag.parents(trg.node).find_edge(&self.dag, |dag, e, _| dag.edge_weight(e).unwrap().target == trg.port) {
-            let result = port(self.dag.edge_endpoints(e).unwrap().0, self.dag.edge_weight(e).unwrap().source);
+        if let Some(e) = self.dag
+            .parents(trg.node)
+            .find_edge(&self.dag, |dag, e, _| {
+                dag.edge_weight(e).unwrap().target == trg.port
+            }) {
+            let result = port(
+                self.dag.edge_endpoints(e).unwrap().0,
+                self.dag.edge_weight(e).unwrap().source,
+            );
             self.dag.remove_edge(e);
             Some(result)
         } else {
@@ -123,7 +148,10 @@ impl<'a, Ix: IndexType> Iterator for Edges<'a, Ix> {
         if self.1 < self.0.len() {
             let e = &self.0[self.1];
             self.1 += 1;
-            Some((port(e.source(), e.weight.source), port(e.target(), e.weight.target)))
+            Some((
+                port(e.source(), e.weight.source),
+                port(e.target(), e.weight.target),
+            ))
         } else {
             None
         }

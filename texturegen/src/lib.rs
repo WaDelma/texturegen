@@ -1,6 +1,6 @@
-extern crate daggy;
 #[macro_use]
 extern crate custom_derive;
+extern crate daggy;
 #[macro_use]
 extern crate enum_derive;
 
@@ -10,7 +10,7 @@ use std::slice;
 use std::collections::HashSet;
 use std::ops::Deref;
 
-use daggy::{PetGraph, NodeIndex};
+use daggy::{NodeIndex, PetGraph};
 use daggy::petgraph::graph;
 use daggy::petgraph::visit::Bfs;
 
@@ -19,7 +19,7 @@ use process::Process;
 use shader::{Context, Shader};
 
 pub use shader::Source;
-pub use dag::{Edge, Port, port};
+pub use dag::{port, Edge, Port};
 
 pub type Col = palette::Srgba;
 
@@ -35,10 +35,10 @@ pub enum EventType {
 }
 
 pub struct Generator<T> {
-    dag: PortNumbered<Node<T>>
+    dag: PortNumbered<Node<T>>,
 }
 
-pub struct GeneratorView<'a, T: 'a> (&'a Generator<T>);
+pub struct GeneratorView<'a, T: 'a>(&'a Generator<T>);
 
 impl<'a, T: 'a> GeneratorView<'a, T> {
     pub fn get(&self, node: NodeIndex) -> Option<(&(Process), &T)> {
@@ -61,11 +61,16 @@ impl<T> Generator<T> {
     }
 
     pub fn view<F>(&mut self, mut fun: F) -> GeneratorView<T>
-        where F: FnMut(Source, &mut T, &Process),
+    where
+        F: FnMut(Source, &mut T, &Process),
     {
         for node in 0..self.dag.node_count() {
             let node = NodeIndex::new(node);
-            if self.dag.node_weight_mut(node).map(|n| n.dirty).unwrap_or(false) {
+            if self.dag
+                .node_weight_mut(node)
+                .map(|n| n.dirty)
+                .unwrap_or(false)
+            {
                 self.update_dag(node);
                 let program = build_shader(&self.dag, node);
                 if let Some(n) = self.dag.node_weight_mut(node) {
@@ -97,7 +102,10 @@ impl<T> Generator<T> {
     }
 
     pub fn remove(&mut self, node: &NodeIndex) -> Option<(Box<Process>, T)> {
-        let children = self.dag.children(*node).map(|n| n.1.node).collect::<Vec<_>>();
+        let children = self.dag
+            .children(*node)
+            .map(|n| n.1.node)
+            .collect::<Vec<_>>();
         self.dag.remove_outgoing_edges(*node);
         for c in children {
             self.dirtify(c);
@@ -156,8 +164,7 @@ impl<T> Generator<T> {
     fn update_dag(&mut self, node: NodeIndex) {
         let mut stack = vec![node];
         while let Some(node) = stack.pop() {
-            self.dag.node_weight_mut(node)
-                .unwrap().program = Some(build_shader(&self.dag, node));
+            self.dag.node_weight_mut(node).unwrap().program = Some(build_shader(&self.dag, node));
             stack.extend(self.dag.children(node).map(|n| n.1.node));
         }
     }
@@ -172,12 +179,19 @@ fn build_shader<T>(dag: &PortNumbered<Node<T>>, node: NodeIndex) -> Source {
     result.build()
 }
 
-fn gather_shader<T>(dag: &PortNumbered<Node<T>>, shader: &mut Shader, node: NodeIndex, visited: &mut HashSet<NodeIndex>) {
+fn gather_shader<T>(
+    dag: &PortNumbered<Node<T>>,
+    shader: &mut Shader,
+    node: NodeIndex,
+    visited: &mut HashSet<NodeIndex>,
+) {
     if visited.contains(&node) {
         return;
     }
     visited.insert(node);
-    let process = &dag.node_weight(node).expect("Node or it's parent didn't exist.").process;
+    let process = &dag.node_weight(node)
+        .expect("Node or it's parent didn't exist.")
+        .process;
     for s in 0..process.max_in() {
         shader.add_fragment(format!("vec4 in_{}_{} = vec4(0);\n", node.index(), s));
     }
@@ -185,7 +199,13 @@ fn gather_shader<T>(dag: &PortNumbered<Node<T>>, shader: &mut Shader, node: Node
     for (parent, target) in dag.parents(node) {
         inputs.insert(target);
         gather_shader(dag, shader, parent.node, visited);
-        shader.add_fragment(format!("in_{}_{} = out_{}_{};\n", node.index(), target, parent.node.index(), parent.port));
+        shader.add_fragment(format!(
+            "in_{}_{} = out_{}_{};\n",
+            node.index(),
+            target,
+            parent.node.index(),
+            parent.port
+        ));
     }
     let mut context = Context::new(node.index(), inputs, process.max_out());
     shader.add_fragment(process.shader(&mut context));

@@ -1,4 +1,4 @@
-use std::fmt::{self, Formatter, Display};
+use std::fmt::{self, Display, Formatter};
 use std::collections::hash_map::{self, HashMap};
 
 use palette::rgb::Rgba;
@@ -50,7 +50,8 @@ impl Shader {
         fragment.push_str("#version 140\n");
         fragment.push_str("in vec2 v_tex_coords;\n");
         fragment.push_str("out vec4 color;\n");
-        fragment.push_str(r#"
+        fragment.push_str(
+            r#"
         //  <https://www.shadertoy.com/view/Xd23Dh>
         //  by inigo quilez <http://iquilezles.org/www/articles/voronoise/voronoise.htm>
         vec3 hash3(vec2 p) {
@@ -149,14 +150,18 @@ impl Shader {
             g.yz = a0.yz * x12.xz + h.yz * x12.yw;
             return 130. * dot(m, g) * 0.5 + 0.5;
         }
-        "#);
+        "#,
+        );
         fragment.push_str("void main() {\n");
         for snippet in self.fragment_snippets {
             fragment.push_str(&snippet);
         }
         fragment.push_str("}");
         // println!("{}", fragment);
-        Source {vertex: vertex, fragment: fragment}
+        Source {
+            vertex: vertex,
+            fragment: fragment,
+        }
     }
 }
 
@@ -177,11 +182,34 @@ impl<'a> Iterator for Inputs<'a> {
 }
 
 impl Context {
-    pub fn new<I: IntoIterator<Item=u32>>(id: usize, inputs: I, outputs: u32) -> Context {
+    pub fn new<I: IntoIterator<Item = u32>>(id: usize, inputs: I, outputs: u32) -> Context {
         Context {
             id: id,
-            inputs: inputs.into_iter().map(|i| (i, Identifier{id: id, itype: Type::Input, index: i})).collect(),
-            outputs: (0..outputs).map(|i| (i as u32, Identifier{id: id, itype: Type::Output, index: i as u32})).collect(),
+            inputs: inputs
+                .into_iter()
+                .map(|i| {
+                    (
+                        i,
+                        Identifier {
+                            id: id,
+                            itype: Type::Input,
+                            index: i,
+                        },
+                    )
+                })
+                .collect(),
+            outputs: (0..outputs)
+                .map(|i| {
+                    (
+                        i as u32,
+                        Identifier {
+                            id: id,
+                            itype: Type::Output,
+                            index: i as u32,
+                        },
+                    )
+                })
+                .collect(),
             temps: 0,
         }
     }
@@ -191,7 +219,10 @@ impl Context {
     }
 
     pub fn first_input(&self) -> Identifier {
-        self.inputs().next().expect("There wasn't any inputs to take first of").1
+        self.inputs()
+            .next()
+            .expect("There wasn't any inputs to take first of")
+            .1
     }
 
     pub fn inputs(&self) -> Inputs {
@@ -203,7 +234,9 @@ impl Context {
     }
 
     pub fn output(&self, index: u32) -> Identifier {
-        *self.outputs.get(&index).expect(&format!("There wasn't output for index: {}", index))
+        *self.outputs
+            .get(&index)
+            .expect(&format!("There wasn't output for index: {}", index))
     }
 
     pub fn temporary(&mut self) -> Identifier {

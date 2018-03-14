@@ -1,23 +1,23 @@
+extern crate arrayvec;
+extern crate daggy;
 #[macro_use]
 extern crate glium;
-extern crate daggy;
-extern crate rusttype;
-extern crate arrayvec;
-extern crate unicode_normalization;
-extern crate texturegen;
-extern crate webweaver;
-extern crate nalgebra;
 extern crate image;
+extern crate nalgebra;
+extern crate rusttype;
+extern crate texturegen;
+extern crate unicode_normalization;
+extern crate webweaver;
 
 use std::cell::RefCell;
 
-use glium::{Program, Display};
-use glium::glutin::{WindowBuilder, EventsLoop, ContextBuilder};
+use glium::{Display, Program};
+use glium::glutin::{ContextBuilder, EventsLoop, WindowBuilder};
 
 use daggy::NodeIndex;
 
-use texturegen::{Col, Generator, Port, port};
-use texturegen::process::{Process, Stripes, BlendType};
+use texturegen::{port, Col, Generator, Port};
+use texturegen::process::{BlendType, Process, Stripes};
 use texturegen::process::Blend as BlendProcess;
 
 use State::*;
@@ -51,12 +51,11 @@ impl Selection {
     fn node(self) -> Option<NodeIndex> {
         use Selection::*;
         match self {
-            Node(node) |
-            Input(Port{node, ..}) |
-            Output(Port{node, ..}) |
-            Setting(node, _) |
-            Choice(node, _, _) =>
-            Some(node),
+            Node(node)
+            | Input(Port { node, .. })
+            | Output(Port { node, .. })
+            | Setting(node, _)
+            | Choice(node, _, _) => Some(node),
         }
     }
 }
@@ -123,12 +122,12 @@ fn main() {
     construct_example_texture(&mut gen);
     while ctx.running {
         let dims = display.get_framebuffer_dimensions();
-        rctx.cam = matrix(
-            [[ctx.zoom / dims.0 as f32, 0., 0., 0.],
-             [0., ctx.zoom / dims.1 as f32, 0., 0.],
-             [0., 0., 1., 0.],
-             [0., 0., 0., 1.]]
-        );
+        rctx.cam = matrix([
+            [ctx.zoom / dims.0 as f32, 0., 0., 0.],
+            [0., ctx.zoom / dims.1 as f32, 0., 0.],
+            [0., 0., 1., 0.],
+            [0., 0., 0., 1.],
+        ]);
 
         let mouse_pos1 = from_window_to_screen(dims, ctx.mouse_window_pos);
         ctx.mouse_pos = from_screen_to_world(rctx.cam, mouse_pos1 - Vect::new(0.5, 0.5));
@@ -149,7 +148,8 @@ fn main() {
                     let percent = (i + 1) as f32 / (amount + 1) as f32;
                     things.push(Vect::new(
                         -half_node + percent * ctx.node_width,
-                        dir * (half_node + ctx.thingy_size / 2.)));
+                        dir * (half_node + ctx.thingy_size / 2.),
+                    ));
                 }
             };
             update(&mut data.inputs.borrow_mut(), process.max_in(), -1.);
@@ -164,16 +164,44 @@ fn main() {
 }
 
 fn construct_example_texture(gen: &mut Generator<Node>) {
-    let n1 = gen.add(Stripes::new(8, 1, Col::new(1., 0.5, 0., 1.), Col::new(0.5, 0.0, 0.5, 1.)), Node::new(Vect::new(-2., -2.)));
-    let n2 = gen.add(Stripes::new(1, 4, Col::new(0., 0.5, 1., 1.), Col::new(0.0, 0.33, 0.0, 1.)), Node::new(Vect::new(0., -2.)));
-    let n3 = gen.add(Stripes::new(16, 16, Col::new(0.1, 0.1, 0.2, 1.), Col::new(0.8, 0.9, 0.9, 1.)), Node::new(Vect::new(2., -2.)));
-    let n4 = gen.add(BlendProcess::new(BlendType::Add, BlendType::Normal), Node::new(Vect::new(2., 0.)));
+    let n1 = gen.add(
+        Stripes::new(8, 1, Col::new(1., 0.5, 0., 1.), Col::new(0.5, 0.0, 0.5, 1.)),
+        Node::new(Vect::new(-2., -2.)),
+    );
+    let n2 = gen.add(
+        Stripes::new(
+            1,
+            4,
+            Col::new(0., 0.5, 1., 1.),
+            Col::new(0.0, 0.33, 0.0, 1.),
+        ),
+        Node::new(Vect::new(0., -2.)),
+    );
+    let n3 = gen.add(
+        Stripes::new(
+            16,
+            16,
+            Col::new(0.1, 0.1, 0.2, 1.),
+            Col::new(0.8, 0.9, 0.9, 1.),
+        ),
+        Node::new(Vect::new(2., -2.)),
+    );
+    let n4 = gen.add(
+        BlendProcess::new(BlendType::Add, BlendType::Normal),
+        Node::new(Vect::new(2., 0.)),
+    );
     gen.connect(port(n1, 0), port(n4, 0));
     gen.connect(port(n3, 0), port(n4, 1));
-    let n5 = gen.add(BlendProcess::new(BlendType::Hard, BlendType::Normal), Node::new(Vect::new(-2., 0.)));
+    let n5 = gen.add(
+        BlendProcess::new(BlendType::Hard, BlendType::Normal),
+        Node::new(Vect::new(-2., 0.)),
+    );
     gen.connect(port(n1, 0), port(n5, 0));
     gen.connect(port(n2, 0), port(n5, 1));
-    let n6 = gen.add(BlendProcess::new(BlendType::Screen, BlendType::Normal), Node::new(Vect::new(0., 2.)));
+    let n6 = gen.add(
+        BlendProcess::new(BlendType::Screen, BlendType::Normal),
+        Node::new(Vect::new(0., 2.)),
+    );
     gen.connect(port(n4, 0), port(n6, 1));
     gen.connect(port(n5, 0), port(n6, 0));
 }
