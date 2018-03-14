@@ -21,12 +21,12 @@ use texturegen::process::{BlendType, Process, Stripes};
 use texturegen::process::Blend as BlendProcess;
 
 use State::*;
-use math::*;
-use graphics::RenderContext;
+// use math::*;
+// use graphics::RenderContext;
 
-mod math;
-mod events;
-mod graphics;
+// mod math;
+// mod events;
+// mod graphics;
 
 pub type Vect = nalgebra::Vector2<f32>;
 pub type Mat = nalgebra::Matrix4<f32>;
@@ -116,21 +116,21 @@ fn main() {
     let context = ContextBuilder::new();
     let display = Display::new(window, context, &events_loop).unwrap();
 
-    let mut rctx = RenderContext::new(&display);
+    // let mut rctx = RenderContext::new(&display);
     let mut ctx = SimContext::new();
     let mut gen = Generator::new();
     construct_example_texture(&mut gen);
     while ctx.running {
         let dims = display.get_framebuffer_dimensions();
-        rctx.cam = matrix([
-            [ctx.zoom / dims.0 as f32, 0., 0., 0.],
-            [0., ctx.zoom / dims.1 as f32, 0., 0.],
-            [0., 0., 1., 0.],
-            [0., 0., 0., 1.],
-        ]);
+        // rctx.cam = matrix([
+        //     [ctx.zoom / dims.0 as f32, 0., 0., 0.],
+        //     [0., ctx.zoom / dims.1 as f32, 0., 0.],
+        //     [0., 0., 1., 0.],
+        //     [0., 0., 0., 1.],
+        // ]);
 
-        let mouse_pos1 = from_window_to_screen(dims, ctx.mouse_window_pos);
-        ctx.mouse_pos = from_screen_to_world(rctx.cam, mouse_pos1 - Vect::new(0.5, 0.5));
+        // let mouse_pos1 = from_window_to_screen(dims, ctx.mouse_window_pos);
+        // ctx.mouse_pos = from_screen_to_world(rctx.cam, mouse_pos1 - Vect::new(0.5, 0.5));
         if let Some(Dragging) = ctx.state {
             if let Some(Selection::Node(n)) = ctx.selected {
                 if let Some(data) = gen.get_data_mut(n) {
@@ -139,7 +139,7 @@ fn main() {
             }
         }
 
-        events::handle(&display, &mut events_loop, &rctx, &mut gen, &mut ctx);
+        // events::handle(&display, &mut events_loop, &rctx, &mut gen, &mut ctx);
         let gen = gen.view(|source, data, process| {
             let half_node = ctx.node_width / 2.;
             let update = |things: &mut Vec<_>, amount, dir| {
@@ -159,7 +159,7 @@ fn main() {
                 .expect("Building generated shader failed");
             *data.shader.borrow_mut() = Some(program);
         });
-        graphics::renderer::render(&display, &mut rctx, gen, &ctx);
+        // graphics::renderer::render(&display, &mut rctx, gen, &ctx);
     }
 }
 
@@ -206,16 +206,16 @@ fn construct_example_texture(gen: &mut Generator<Node>) {
     gen.connect(port(n5, 0), port(n6, 0));
 }
 
-fn input_pos(gen: &Generator<Node>, input: Port<u32>, _size: f32) -> Vect {
-    let node = gen.get(input.node).unwrap();
-    let pos = node.1.pos;
-    let percent = (input.port + 1) as f32 / (node.0.max_in() + 1) as f32;
-    Vect::new(pos[0] - 0.5 + percent, -(pos[1] - 0.5))
-}
+// fn input_pos(gen: &Generator<Node>, input: Port<u32>, _size: f32) -> Vect {
+//     let node = gen.get(input.node).unwrap();
+//     let pos = node.1.pos;
+//     let percent = (input.port + 1) as f32 / (node.0.max_in() + 1) as f32;
+//     Vect::new(pos[0] - 0.5 + percent, -(pos[1] - 0.5))
+// }
 
-fn output_pos(gen: &Generator<Node>, output: Port<u32>, size: f32) -> Vect {
-    let node = gen.get(output.node).unwrap();
-    let pos = node.1.pos;
-    let percent = (output.port + 1) as f32 / (node.0.max_out() + 1) as f32;
-    Vect::new(pos[0] - 0.5 + percent, -(pos[1] + 0.5 + size))
-}
+// fn output_pos(gen: &Generator<Node>, output: Port<u32>, size: f32) -> Vect {
+//     let node = gen.get(output.node).unwrap();
+//     let pos = node.1.pos;
+//     let percent = (output.port + 1) as f32 / (node.0.max_out() + 1) as f32;
+//     Vect::new(pos[0] - 0.5 + percent, -(pos[1] + 0.5 + size))
+// }
